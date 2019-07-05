@@ -19,9 +19,10 @@ using namespace web::http::client;
 // HTTP client features
 using namespace std;
 
-class okapiConnector
+class OkapiConnector
 {
 public:
+
 	string password;
 	string username;
 	string accessToken;
@@ -40,7 +41,7 @@ public:
 		struct completeError error;
 	};
 
-	completeResult init(method mtd);
+	completeResult init(method mtd, string username, string password);
 
 	completeResult sendRequest(http_client & okapiRequest, http_request & request);
 

@@ -29,11 +29,11 @@ OkapiConnector::completeResult retrieveResult(OkapiConnector connector, http_cli
     cout << "The request was successful. Your result is not ready yet.  Waiting: " << i << " s." << endl;
     i++;
     sleep(1);
-    if (i == 10)
-    {
-      cout << "OKAPI timeout" << endl;
-      return result;
-    }
+//    if (i == 10)
+//    {
+//      cout << "OKAPI timeout" << endl;
+//      return result;
+//    }
   }
   // Final call to the backend
   return connector.getResult(fullUrl, method);
@@ -55,8 +55,8 @@ void predictPassesTests(OkapiConnector connector, string baseUrl)
   string tlePassPrediction = "1 25544U 98067A   18218.76369510  .00001449  00000-0  29472-4 0  9993\n2 25544  51.6423 126.6422 0005481  33.3092  62.9075 15.53806849126382";
   
   // user input NEPTUNE simple
-  double area = 1;
-  double mass = 1;
+  double area = 0.01;
+  double mass = 1.3;
   double x = -2915.65441951;
   double y = -3078.17058851;
   double z = 5284.39698421;
@@ -214,8 +214,8 @@ void predictPassesTests(OkapiConnector connector, string baseUrl)
 void neptuneTest(OkapiConnector connector, string baseUrl)
 {
   // user input NEPTUNE simple
-  double area = 1;
-  double mass = 1;
+  double area = 0.01;
+  double mass = 1.3;
   double x = 615.119526;
   double y = -7095.644839;
   double z = -678.668352;
@@ -253,7 +253,6 @@ void neptuneTest(OkapiConnector connector, string baseUrl)
   propagateNeptuneSimpleRequestBody[U("simple_state")] = simpleState;
   propagateNeptuneSimpleRequestBody[U("settings")] = settingsSimple;
 
-
   // send request for NEPTUNE propagation
   string neptuneUrlRequest = "/propagate-orbit/neptune/requests";
   http_client okapiRequestNeptune(baseUrl + neptuneUrlRequest);
@@ -289,10 +288,10 @@ void neptuneTest(OkapiConnector connector, string baseUrl)
     cout << "The request was successful. Your result is not ready yet.  Waiting: " << i << " s." << endl;
     i++;
     sleep(1);
-    if (i == 10)
-    {
-      cout << "OKAPI timeout" << endl;
-    }
+//    if (i == 10)
+//    {
+//      cout << "OKAPI timeout" << endl;
+//    }
   }
   neptuneResult = connector.getResult(okapiGetNeptune, getNeptunePropagation);
   if (neptuneResult.error.code != 200 && neptuneResult.error.code != 202)
@@ -324,10 +323,395 @@ void neptuneTest(OkapiConnector connector, string baseUrl)
     cout << "The request was successful. Your result is not ready yet.  Waiting: " << i << " s." << endl;
     i++;
     sleep(1);
-    if (i == 10)
-    {
-    cout << "OKAPI timeout" << endl;
-    }
+//    if (i == 10)
+//    {
+//    cout << "OKAPI timeout" << endl;
+//    }
+  }
+  neptuneGenericResult = connector.getResult(okapiGetNeptuneGeneric, getNeptuneGenericPropagation);
+  if (neptuneGenericResult.error.code != 200 && neptuneGenericResult.error.code != 202)
+  {
+    cout << "Retrieving NEPTUNE propagation simple generic response failed with status: " << neptuneGenericResult.error.status << endl;
+    cout << neptuneGenericResult.error.message << endl;
+  }
+  if (neptuneGenericResult.error.code == 200) {
+    cout << neptuneGenericResult.body.serialize() << endl;
+  }
+  else {
+    cout << "NEPTUNE propagation simple generic request failed with status: " << neptuneGenericResult.error.status << endl;
+    cout << neptuneGenericResult.error.message << endl;
+  }
+}
+
+/**
+ * Tests the NEPTUNE OPM end points with covariance propagation
+ */
+void neptuneOpmCovarianceTest(OkapiConnector connector, string baseUrl)
+{
+  // user input NEPTUNE OPM
+  string OBJECT_NAME = "ISS (ZARYA)";
+  string OBJECT_ID = "1998-067-A";
+  string CENTER_NAME = "EARTH";
+  string REF_FRAME = "GCRF";
+  string REF_FRAME_EPOCH = "2000-01-01T00:00:00Z";
+  string TIME_SYSTEM = "UTC";
+  string EPOCH = "2016-07-23T00:31:50.000Z";
+  double X = 615.119526;
+  double Y = -7095.644839;
+  double Z = -678.668352;
+  double X_DOT = 0.390367;
+  double Y_DOT = 0.741902;
+  double Z_DOT = -7.39698;
+  double CX_X = 0.10000000E-04;
+  double CY_X = 0.0;
+  double CY_Y = 0.10000000E-03;
+  double CZ_X = 0.0;
+  double CZ_Y = 0.0;
+  double CZ_Z = 0.30000000E-04;
+  double CX_DOT_X = 0.0;
+  double CX_DOT_Y = 0.0;
+  double CX_DOT_Z = 0.0;
+  double CX_DOT_X_DOT = 0.20000000E-09;
+  double CY_DOT_X = 0.0;
+  double CY_DOT_Y = 0.0;
+  double CY_DOT_Z = 0.0;
+  double CY_DOT_X_DOT = 0.0;
+  double CY_DOT_Y_DOT = 0.10000000E-09;
+  double CZ_DOT_X = 0.0;
+  double CZ_DOT_Y = 0.0;
+  double CZ_DOT_Z = 0.0;
+  double CZ_DOT_X_DOT = 0.0;
+  double CZ_DOT_Y_DOT = 0.0;
+  double CZ_DOT_Z_DOT = 0.10000000E-09;
+  string MAN_EPOCH_IGINITION = "2016-07-23T00:31:50.000Z";
+  double MASS = 1.3;
+  double SOLAR_RAD_COEFF = 1.3;
+  double DRAG_AREA = 0.01;
+  double DRAG_COEFF = 2.2;
+  string propagationEndEpochNeptuneOpm = "2016-07-23T03:31:50.000Z";
+  double outputStepSizeNeptuneOpm = 30;
+
+  web::json::value opmHeader;
+  opmHeader[U("CCSDS_OPM_VERS")] = 2;
+  web::json::value opmMetaData;
+  opmMetaData[U("OBJECT_NAME")] = web::json::value::string(OBJECT_NAME);
+  opmMetaData[U("OBJECT_ID")] = web::json::value::string(OBJECT_ID);
+  opmMetaData[U("CENTER_NAME")] = web::json::value::string(CENTER_NAME);
+  opmMetaData[U("REF_FRAME")] = web::json::value::string(REF_FRAME);
+  opmMetaData[U("REF_FRAME_EPOCH")] = web::json::value::string(REF_FRAME_EPOCH);
+  opmMetaData[U("TIME_SYSTEM")] = web::json::value::string(TIME_SYSTEM);
+  
+  web::json::value opmData;
+  opmData[U("DRAG_AREA")] = DRAG_AREA;
+  opmData[U("DRAG_COEFF")] = DRAG_COEFF;
+  opmData[U("X")] = X;
+  opmData[U("Y")] = Y;
+  opmData[U("Z")] = Z;
+  opmData[U("X_DOT")] = X_DOT;
+  opmData[U("Y_DOT")] = Y_DOT;
+  opmData[U("Z_DOT")] = Z_DOT;
+  opmData[U("EPOCH")] = web::json::value::string(EPOCH);
+  opmData[U("COV_REF_FRAME")] = web::json::value::string("UVW");
+  opmData[U("CX_X")] = CX_X;
+  opmData[U("CY_X")] = CY_X;
+  opmData[U("CY_Y")] = CY_Y;
+  opmData[U("CZ_X")] = CZ_X;
+  opmData[U("CZ_Y")] = CZ_Y;
+  opmData[U("CZ_Z")] = CZ_Z;
+  opmData[U("CX_DOT_X")] = CX_DOT_X;
+  opmData[U("CX_DOT_Y")] = CX_DOT_Y;
+  opmData[U("CX_DOT_Z")] = CX_DOT_Z;
+  opmData[U("CX_DOT_X_DOT")] = CX_DOT_X_DOT;
+  opmData[U("CY_DOT_X")] = CY_DOT_X;
+  opmData[U("CY_DOT_Y")] = CY_DOT_Y;
+  opmData[U("CY_DOT_Z")] = CY_DOT_Z;
+  opmData[U("CY_DOT_X_DOT")] = CY_DOT_X_DOT;
+  opmData[U("CY_DOT_Y_DOT")] = CY_DOT_Y_DOT;
+  opmData[U("CZ_DOT_X")] = CZ_DOT_X;
+  opmData[U("CZ_DOT_Y")] = CZ_DOT_Y;
+  opmData[U("CZ_DOT_Z")] = CZ_DOT_Z;
+  opmData[U("CZ_DOT_X_DOT")] = CZ_DOT_X_DOT;
+  opmData[U("CZ_DOT_Y_DOT")] = CZ_DOT_Y_DOT;
+  opmData[U("CZ_DOT_Z_DOT")] = CZ_DOT_Z_DOT;
+  opmData[U("MASS")] = MASS;
+  opmData[U("SOLAR_RAD_COEFF")] = SOLAR_RAD_COEFF;
+  opmData[U("DRAG_AREA")] = DRAG_AREA;
+  opmData[U("DRAG_COEFF")] = DRAG_COEFF;
+  web::json::value ccsdsOpm;
+  ccsdsOpm[U("OPM_HEADER")] = opmHeader;
+  ccsdsOpm[U("OPM_META_DATA")] = opmMetaData;
+  ccsdsOpm[U("OPM_DATA")] = opmData;
+
+  web::json::value neptuneConfigSimple;
+  neptuneConfigSimple[U("geopotential_degree_order")] = 6;
+  neptuneConfigSimple[U("atmospheric_drag")] = 1;
+  neptuneConfigSimple[U("horizontal_wind")] = 0;
+  neptuneConfigSimple[U("sun_gravity")] = 1;
+  neptuneConfigSimple[U("moon_gravity")] = 1;
+  neptuneConfigSimple[U("solar_radiation_pressure")] = 1;
+  neptuneConfigSimple[U("solid_tides")] = 1;
+  neptuneConfigSimple[U("ocean_tides")] = 0;
+  web::json::value settingsOpm;
+  settingsOpm[U("propagation_end_epoch")] = web::json::value::string(propagationEndEpochNeptuneOpm);
+  settingsOpm[U("output_step_size")] = outputStepSizeNeptuneOpm;
+  settingsOpm[U("neptune_config")] = neptuneConfigSimple;
+  web::json::value propagateNeptuneSimpleRequestBody;
+  propagateNeptuneSimpleRequestBody[U("CCSDS_OPM")] = ccsdsOpm;
+  propagateNeptuneSimpleRequestBody[U("settings")] = settingsOpm;
+
+  // send request for NEPTUNE propagation
+  string neptuneUrlRequest = "/propagate-orbit/neptune/requests";
+  http_client okapiRequestNeptune(baseUrl + neptuneUrlRequest);
+  http_request requestNeptune(methods::POST);
+  requestNeptune.set_body(propagateNeptuneSimpleRequestBody);
+  requestNeptune.headers().add(U("access_token"), connector.accessToken);
+  OkapiConnector::completeResult neptuneRequest = connector.sendRequest(okapiRequestNeptune, requestNeptune);
+  if (neptuneRequest.error.code == 200 || neptuneRequest.error.code == 202)
+  {
+    cout << "Send NEPTUNE propagation request completed" << endl;
+  }
+  else {
+    cout << "NEPTUNE propagation request failed with status: " << neptuneRequest.error.status << endl;
+    cout << neptuneRequest.error.message << endl;
+  }
+  string requestIdNeptune = connector.requestId;
+  cout << "Request ID: " << requestIdNeptune << endl;
+
+  // get results for NEPTUNE and print them in the terminal
+  string neptuneUrlGet = "/propagate-orbit/neptune/opm/results/";
+  http_client okapiGetNeptune(baseUrl + neptuneUrlGet + requestIdNeptune);
+  http_request getNeptunePropagation(methods::GET);
+  getNeptunePropagation.headers().add(U("access_token"), connector.accessToken);
+  OkapiConnector::completeResult neptuneResult = connector.getResult(okapiGetNeptune, getNeptunePropagation);
+  if (neptuneResult.error.code != 200 && neptuneResult.error.code != 202)
+  {
+    cout << "Retrieving NEPTUNE propagation response failed with status: " << neptuneResult.error.status << endl;
+    cout << neptuneResult.error.message << endl;
+  }
+  int i = 0;
+  while (neptuneResult.error.code == 202) {
+    neptuneResult = connector.getResult(okapiGetNeptune, getNeptunePropagation);
+    cout << "The request was successful. Your result is not ready yet.  Waiting: " << i << " s." << endl;
+    i++;
+    sleep(1);
+//    if (i == 10)
+//    {
+//      cout << "OKAPI timeout" << endl;
+//    }
+  }
+  neptuneResult = connector.getResult(okapiGetNeptune, getNeptunePropagation);
+  if (neptuneResult.error.code != 200 && neptuneResult.error.code != 202)
+  {
+    cout << "Retrieving NEPTUNE propagation simple response failed with status: " << neptuneResult.error.status << endl;
+    cout << neptuneResult.error.message << endl;
+  }
+  if (neptuneResult.error.code == 200) {
+    cout << neptuneResult.body.serialize() << endl;
+  }
+  else {
+    cout << "NEPTUNE propagation simple request failed with status: " << neptuneResult.error.status << endl;
+    cout << neptuneResult.error.message << endl;
+  }
+
+  string neptuneGenericUrlGet = "/propagate-orbit/neptune/opm/results/";
+  http_client okapiGetNeptuneGeneric(baseUrl + neptuneGenericUrlGet + requestIdNeptune + "/generic");
+  http_request getNeptuneGenericPropagation(methods::GET);
+  getNeptuneGenericPropagation.headers().add(U("access_token"), connector.accessToken);
+  OkapiConnector::completeResult neptuneGenericResult = connector.getResult(okapiGetNeptuneGeneric, getNeptuneGenericPropagation);
+  if (neptuneGenericResult.error.code != 200 && neptuneGenericResult.error.code != 202)
+  {
+    cout << "Retrieving NEPTUNE propagation response failed with status: " << neptuneGenericResult.error.status << endl;
+    cout << neptuneGenericResult.error.message << endl;
+  }
+  i = 0;
+  while (neptuneGenericResult.error.code == 202) {
+    neptuneGenericResult = connector.getResult(okapiGetNeptuneGeneric, getNeptuneGenericPropagation);
+    cout << "The request was successful. Your result is not ready yet.  Waiting: " << i << " s." << endl;
+    i++;
+    sleep(1);
+//    if (i == 10)
+//    {
+//    cout << "OKAPI timeout" << endl;
+//    }
+  }
+  neptuneGenericResult = connector.getResult(okapiGetNeptuneGeneric, getNeptuneGenericPropagation);
+  if (neptuneGenericResult.error.code != 200 && neptuneGenericResult.error.code != 202)
+  {
+    cout << "Retrieving NEPTUNE propagation simple generic response failed with status: " << neptuneGenericResult.error.status << endl;
+    cout << neptuneGenericResult.error.message << endl;
+  }
+  if (neptuneGenericResult.error.code == 200) {
+    cout << neptuneGenericResult.body.serialize() << endl;
+  }
+  else {
+    cout << "NEPTUNE propagation simple generic request failed with status: " << neptuneGenericResult.error.status << endl;
+    cout << neptuneGenericResult.error.message << endl;
+  }
+}
+
+/**
+ * Tests the NEPTUNE OPM end points with enabled maneuvre propagation
+ */
+void neptuneOpmManeuvreTest(OkapiConnector connector, string baseUrl)
+{
+  // user input NEPTUNE OPM
+  string OBJECT_NAME = "ISS (ZARYA)";
+  string OBJECT_ID = "1998-067-A";
+  string CENTER_NAME = "EARTH";
+  string REF_FRAME = "GCRF";
+  string REF_FRAME_EPOCH = "2000-01-01T00:00:00Z";
+  string TIME_SYSTEM = "UTC";
+  string EPOCH = "2016-07-23T00:31:50.000Z";
+  double X = 615.119526;
+  double Y = -7095.644839;
+  double Z = -678.668352;
+  double X_DOT = 0.390367;
+  double Y_DOT = 0.741902;
+  double Z_DOT = -7.39698;
+  
+  string MAN_EPOCH_IGINITION = "2016-07-23T00:31:50.000Z";
+  double MAN_DURATION = 1800;
+  double MAN_A_1 = 0.0;
+  double MAN_A_2 = 1e-8;
+  double MAN_A_3 = 0.0;
+  double MASS = 1.3;
+  double SOLAR_RAD_COEFF = 1.3;
+  double DRAG_AREA = 0.01;
+  double DRAG_COEFF = 2.2;
+  string propagationEndEpochNeptuneOpm = "2016-07-23T03:31:50.000Z";
+  double outputStepSizeNeptuneOpm = 30;
+
+  web::json::value opmHeader;
+  opmHeader[U("CCSDS_OPM_VERS")] = 2;
+  web::json::value opmMetaData;
+  opmMetaData[U("OBJECT_NAME")] = web::json::value::string(OBJECT_NAME);
+  opmMetaData[U("OBJECT_ID")] = web::json::value::string(OBJECT_ID);
+  opmMetaData[U("CENTER_NAME")] = web::json::value::string(CENTER_NAME);
+  opmMetaData[U("REF_FRAME")] = web::json::value::string(REF_FRAME);
+  opmMetaData[U("REF_FRAME_EPOCH")] = web::json::value::string(REF_FRAME_EPOCH);
+  opmMetaData[U("TIME_SYSTEM")] = web::json::value::string(TIME_SYSTEM);
+  
+  web::json::value opmData;
+  opmData[U("DRAG_AREA")] = DRAG_AREA;
+  opmData[U("DRAG_COEFF")] = DRAG_COEFF;
+  opmData[U("X")] = X;
+  opmData[U("Y")] = Y;
+  opmData[U("Z")] = Z;
+  opmData[U("X_DOT")] = X_DOT;
+  opmData[U("Y_DOT")] = Y_DOT;
+  opmData[U("Z_DOT")] = Z_DOT;
+  opmData[U("EPOCH")] = web::json::value::string(EPOCH);
+  opmData[U("COV_REF_FRAME")] = web::json::value::string("UVW");
+  opmData[U("MASS")] = MASS;
+  opmData[U("SOLAR_RAD_COEFF")] = SOLAR_RAD_COEFF;
+  opmData[U("DRAG_AREA")] = DRAG_AREA;
+  opmData[U("DRAG_COEFF")] = DRAG_COEFF;
+  std::vector<web::json::value> maneuvres;
+  web::json::value maneuvre;
+  maneuvre[U("MAN_EPOCH_IGNITION")] = web::json::value::string(MAN_EPOCH_IGINITION);
+  maneuvre[U("MAN_REF_FRAME")] = web::json::value::string("UVW");
+  maneuvre[U("MAN_DURATION")] = MAN_DURATION;
+  maneuvre[U("MAN_A_1")] = MAN_A_1;
+  maneuvre[U("MAN_A_2")] = MAN_A_2;
+  maneuvre[U("MAN_A_3")] = MAN_A_3;
+  maneuvres.push_back(maneuvre);
+  opmData[U("MANEUVERS")] = web::json::value::array(maneuvres);
+  web::json::value ccsdsOpm;
+  ccsdsOpm[U("OPM_HEADER")] = opmHeader;
+  ccsdsOpm[U("OPM_META_DATA")] = opmMetaData;
+  ccsdsOpm[U("OPM_DATA")] = opmData;
+
+  web::json::value neptuneConfigSimple;
+  neptuneConfigSimple[U("geopotential_degree_order")] = 6;
+  neptuneConfigSimple[U("atmospheric_drag")] = 1;
+  neptuneConfigSimple[U("horizontal_wind")] = 0;
+  neptuneConfigSimple[U("sun_gravity")] = 1;
+  neptuneConfigSimple[U("moon_gravity")] = 1;
+  neptuneConfigSimple[U("solar_radiation_pressure")] = 1;
+  neptuneConfigSimple[U("solid_tides")] = 1;
+  neptuneConfigSimple[U("ocean_tides")] = 0;
+  web::json::value settingsOpm;
+  settingsOpm[U("propagation_end_epoch")] = web::json::value::string(propagationEndEpochNeptuneOpm);
+  settingsOpm[U("output_step_size")] = outputStepSizeNeptuneOpm;
+  settingsOpm[U("neptune_config")] = neptuneConfigSimple;
+  web::json::value propagateNeptuneSimpleRequestBody;
+  propagateNeptuneSimpleRequestBody[U("CCSDS_OPM")] = ccsdsOpm;
+  propagateNeptuneSimpleRequestBody[U("settings")] = settingsOpm;
+
+  // send request for NEPTUNE propagation
+  string neptuneUrlRequest = "/propagate-orbit/neptune/requests";
+  http_client okapiRequestNeptune(baseUrl + neptuneUrlRequest);
+  http_request requestNeptune(methods::POST);
+  requestNeptune.set_body(propagateNeptuneSimpleRequestBody);
+  requestNeptune.headers().add(U("access_token"), connector.accessToken);
+  OkapiConnector::completeResult neptuneRequest = connector.sendRequest(okapiRequestNeptune, requestNeptune);
+  if (neptuneRequest.error.code == 200 || neptuneRequest.error.code == 202)
+  {
+    cout << "Send NEPTUNE propagation request completed" << endl;
+  }
+  else {
+    cout << "NEPTUNE propagation request failed with status: " << neptuneRequest.error.status << endl;
+    cout << neptuneRequest.error.message << endl;
+  }
+  string requestIdNeptune = connector.requestId;
+  cout << "Request ID: " << requestIdNeptune << endl;
+
+  // get results for NEPTUNE and print them in the terminal
+  string neptuneUrlGet = "/propagate-orbit/neptune/opm/results/";
+  http_client okapiGetNeptune(baseUrl + neptuneUrlGet + requestIdNeptune);
+  http_request getNeptunePropagation(methods::GET);
+  getNeptunePropagation.headers().add(U("access_token"), connector.accessToken);
+  OkapiConnector::completeResult neptuneResult = connector.getResult(okapiGetNeptune, getNeptunePropagation);
+  if (neptuneResult.error.code != 200 && neptuneResult.error.code != 202)
+  {
+    cout << "Retrieving NEPTUNE propagation response failed with status: " << neptuneResult.error.status << endl;
+    cout << neptuneResult.error.message << endl;
+  }
+  int i = 0;
+  while (neptuneResult.error.code == 202) {
+    neptuneResult = connector.getResult(okapiGetNeptune, getNeptunePropagation);
+    cout << "The request was successful. Your result is not ready yet.  Waiting: " << i << " s." << endl;
+    i++;
+    sleep(1);
+//    if (i == 10)
+//    {
+//      cout << "OKAPI timeout" << endl;
+//    }
+  }
+  neptuneResult = connector.getResult(okapiGetNeptune, getNeptunePropagation);
+  if (neptuneResult.error.code != 200 && neptuneResult.error.code != 202)
+  {
+    cout << "Retrieving NEPTUNE propagation simple response failed with status: " << neptuneResult.error.status << endl;
+    cout << neptuneResult.error.message << endl;
+  }
+  if (neptuneResult.error.code == 200) {
+    cout << neptuneResult.body.serialize() << endl;
+  }
+  else {
+    cout << "NEPTUNE propagation simple request failed with status: " << neptuneResult.error.status << endl;
+    cout << neptuneResult.error.message << endl;
+  }
+
+  string neptuneGenericUrlGet = "/propagate-orbit/neptune/opm/results/";
+  http_client okapiGetNeptuneGeneric(baseUrl + neptuneGenericUrlGet + requestIdNeptune + "/generic");
+  http_request getNeptuneGenericPropagation(methods::GET);
+  getNeptuneGenericPropagation.headers().add(U("access_token"), connector.accessToken);
+  OkapiConnector::completeResult neptuneGenericResult = connector.getResult(okapiGetNeptuneGeneric, getNeptuneGenericPropagation);
+  if (neptuneGenericResult.error.code != 200 && neptuneGenericResult.error.code != 202)
+  {
+    cout << "Retrieving NEPTUNE propagation response failed with status: " << neptuneGenericResult.error.status << endl;
+    cout << neptuneGenericResult.error.message << endl;
+  }
+  i = 0;
+  while (neptuneGenericResult.error.code == 202) {
+    neptuneGenericResult = connector.getResult(okapiGetNeptuneGeneric, getNeptuneGenericPropagation);
+    cout << "The request was successful. Your result is not ready yet.  Waiting: " << i << " s." << endl;
+    i++;
+    sleep(1);
+//    if (i == 10)
+//    {
+//    cout << "OKAPI timeout" << endl;
+//    }
   }
   neptuneGenericResult = connector.getResult(okapiGetNeptuneGeneric, getNeptuneGenericPropagation);
   if (neptuneGenericResult.error.code != 200 && neptuneGenericResult.error.code != 202)
@@ -350,8 +734,8 @@ void neptuneTest(OkapiConnector connector, string baseUrl)
 void orekitNumericalTest(OkapiConnector connector, string baseUrl)
 {
   // user input Orekit simple
-  double area = 1;
-  double mass = 1;
+  double area = 0.01;
+  double mass = 1.3;
   double x = 615.119526;
   double y = -7095.644839;
   double z = -678.668352;
@@ -893,7 +1277,7 @@ int main(int argc, char* argv[])
   string username = <username>;
   // Here you add your password:
   string password = <password>;
-  // Correct URL and port for the v2019.08 release
+  // Correct URL and port for the v2019.11 release
   string baseUrl = "http://okapi.ddns.net:34569";
 
 	// Authentication with Auth0 to retrieve the access token
@@ -912,7 +1296,7 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-	// PASS PREDICTION
+  // PASS PREDICTION
   cout << "[Predict passes] - started" << endl;
   predictPassesTests(connector, baseUrl);
   cout << "[Predict passes] - completed" << endl;
@@ -923,6 +1307,15 @@ int main(int argc, char* argv[])
   neptuneTest(connector, baseUrl);
   cout << "[Propagate orbit NEPTUNE] - completed" << endl;
 
+  // NEPTUNE co-variance propagation
+  cout << "[Propagate OPM Co-variance NEPTUNE] - started" << endl;
+  neptuneOpmCovarianceTest(connector, baseUrl);
+  cout << "[Propagate OPM Co-variance NEPTUNE] - completed" << endl;
+  
+  // NEPTUNE maneuvre propagation enabled
+  cout << "[Propagate OPM Maneuvre NEPTUNE] - started" << endl;
+  neptuneOpmManeuvreTest(connector, baseUrl);
+  cout << "[Propagate OPM Maneuvre NEPTUNE] - completed" << endl;
 
   // Orekit propagation
   cout << "[Propagate orbit Orekit-numerical] - started" << endl;

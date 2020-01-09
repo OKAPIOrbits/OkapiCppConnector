@@ -1,11 +1,11 @@
 #include "OkapiConnector.h"
 
 // Routine to initialize communications with OKAPI
-OkapiConnector::completeResult OkapiConnector::init(method mtd, string username, string password)
+OkapiConnector::CompleteResult OkapiConnector::init(method mtd, string username, string password)
 {
   this->username = username;
   this->password = password;
-	completeResult result;
+	CompleteResult result;
 	http_client auth(U("https://okapi-development.eu.auth0.com/oauth/token/"));
 	web::json::value request_token_payload;
 	request_token_payload[U("grant_type")] = web::json::value::string("password");
@@ -91,9 +91,16 @@ OkapiConnector::completeResult OkapiConnector::init(method mtd, string username,
 }
 
 // Send a request to OKAPI
-OkapiConnector::completeResult OkapiConnector::sendRequest(http_client & okapiRequest, http_request & request)
+OkapiConnector::CompleteResult OkapiConnector::sendRequest(string baseUrl, string endpoint, web::json::value requestBody)
 {
-	completeResult result;
+	CompleteResult result;
+  
+  // Compile the proper post request
+  http_client okapiRequest(baseUrl + endpoint);
+  http_request request(methods::POST);
+  request.set_body(requestBody);
+  request.headers().add(U("access_token"), this->accessToken);
+  
 	okapiRequest.request(request).then([&](http_response response)
 	{
 		result.error.code = response.status_code();
@@ -173,10 +180,16 @@ OkapiConnector::completeResult OkapiConnector::sendRequest(http_client & okapiRe
 }
 
 // get the result from a service execution request from OKAPI
-OkapiConnector::completeResult OkapiConnector::getResult(http_client & okapiGet, http_request & request2)
+OkapiConnector::CompleteResult OkapiConnector::getResult(string baseUrl, string endpoint, string requestId)
 {
-	completeResult result;
-	okapiGet.request(request2).then([&](http_response response)
+	CompleteResult result;
+  
+  // Compile the proper get request
+  http_client okapiGet(baseUrl + endpoint + requestId);
+  http_request request(methods::GET);
+  request.headers().add(U("access_token"), this->accessToken);
+ 
+	okapiGet.request(request).then([&](http_response response)
 	{
 		result.error.code = response.status_code();
 		response.headers().set_content_type("application/json");

@@ -24,24 +24,24 @@ public:
 	string accessToken;
 	string requestId;
 
-	struct completeError
+	struct CompleteError
 	{
 		string message;
 		string status;
 		int code;
 	};
 
-	struct completeResult
+	struct CompleteResult
 	{
 		web::json::value body;
-		struct completeError error;
+		struct CompleteError error;
 	};
 
-	completeResult init(method mtd, string username, string password);
+	CompleteResult init(method mtd, string username, string password);
 
-	completeResult sendRequest(http_client & okapiRequest, http_request & request);
+  CompleteResult sendRequest(string baseUrl, string endpoint, web::json::value requestBody);
 
-	completeResult getResult(http_client & okapiGet, http_request & request2);
+	CompleteResult getResult(string baseUrl, string endpoint, string requestId);
 
 };
 

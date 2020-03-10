@@ -1,11 +1,11 @@
 #include "OkapiConnector.h"
 
 // Routine to initialize communications with OKAPI
-OkapiConnector::CompleteResult OkapiConnector::init(method mtd, string username, string password)
+OkapiConnector::Result OkapiConnector::init(method mtd, string username, string password)
 {
   this->username = username;
   this->password = password;
-	CompleteResult result;
+	Result result;
 	http_client auth(U("https://okapi-development.eu.auth0.com/oauth/token/"));
 	web::json::value request_token_payload;
 	request_token_payload[U("grant_type")] = web::json::value::string("password");
@@ -78,12 +78,10 @@ OkapiConnector::CompleteResult OkapiConnector::init(method mtd, string username,
 				accessToken = access_token_response_obj.at(U("access_token")).as_string();
 				result.error.message = "No message available";
 				result.error.status = "OK";
-				//std::cout << "Authentication successful" << std::endl;
 			}
 			else
 			{
 				result.error.message = "access Token missing in response from Auth0.";
-				//std::cout << "access Token missing in response from Auth0" << std::endl;
 			}
 		}
 	}).wait();
@@ -91,9 +89,9 @@ OkapiConnector::CompleteResult OkapiConnector::init(method mtd, string username,
 }
 
 // Send a request to OKAPI
-OkapiConnector::CompleteResult OkapiConnector::sendRequest(string baseUrl, string endpoint, web::json::value requestBody)
+OkapiConnector::Result OkapiConnector::sendRequest(string baseUrl, string endpoint, web::json::value requestBody)
 {
-	CompleteResult result;
+	Result result;
   
   // Compile the proper post request
   http_client okapiRequest(baseUrl + endpoint);
@@ -117,10 +115,10 @@ OkapiConnector::CompleteResult OkapiConnector::sendRequest(string baseUrl, strin
 
 		if (result.error.code != 200 && result.error.code != 202)
 		{
-			if(responseTree.get_optional<std::string>("state_msg"))
+			if(responseTree.get_optional<std::string>("status"))
 			{
-				result.error.message = responseTree.get<std::string>("state_msg.text");
-				result.error.status = responseTree.get<std::string>("state_msg.type");
+				result.error.message = responseTree.get<std::string>("status.text");
+				result.error.status = responseTree.get<std::string>("status.type");
 			}
 			else if(result.error.code == 401)
 			{
@@ -164,15 +162,13 @@ OkapiConnector::CompleteResult OkapiConnector::sendRequest(string baseUrl, strin
 			{
 				json::object send_request_response_obj = send_request_response.as_object();
 				requestId = send_request_response_obj.at(U("request_id")).as_string();
-				result.error.message = responseTree.get<std::string>("state_msg.text");
-				result.error.status = responseTree.get<std::string>("state_msg.type");
-				//std::cout << "send request successful, with ID: " << requestId << std::endl;
+				result.error.message = responseTree.get<std::string>("status.text");
+				result.error.status = responseTree.get<std::string>("status.type");
 			}
 			else
 			{
 				result.error.message = "request ID missing in response from OKAPI.";
 				result.error.status = "FATAL";
-				//std::cout << "request ID missing in response from OKAPI" << std::endl;
 			}
 		}
 	}).wait();
@@ -180,12 +176,14 @@ OkapiConnector::CompleteResult OkapiConnector::sendRequest(string baseUrl, strin
 }
 
 // get the result from a service execution request from OKAPI
-OkapiConnector::CompleteResult OkapiConnector::getResult(string baseUrl, string endpoint, string requestId)
+OkapiConnector::Result OkapiConnector::getResult(string baseUrl, string endpoint, string requestId, string resultType)
 {
-	CompleteResult result;
+	Result result;
   
   // Compile the proper get request
-  http_client okapiGet(baseUrl + endpoint + requestId);
+  string url = baseUrl + endpoint + requestId + resultType;
+  http_client okapiGet(url);
+  
   http_request request(methods::GET);
   request.headers().add(U("access_token"), this->accessToken);
  
@@ -193,150 +191,65 @@ OkapiConnector::CompleteResult OkapiConnector::getResult(string baseUrl, string 
 	{
 		result.error.code = response.status_code();
 		response.headers().set_content_type("application/json");
-		json::value get_results_response = response.extract_json().get();
 
-		result.body = get_results_response;
-//		std::cout << result.body.serialize() << std::endl;
+		result.body = response.extract_json().get();
 		std::stringstream stream;
 		stream << result.body;
 
 		boost::property_tree::ptree responseTree;
 		boost::property_tree::read_json(stream, responseTree);
 
-		if (okapiGet.base_uri().to_string().find("generic") != std::string::npos)
-		{
-			if(result.error.code != 200 && result.error.code != 202)
-			{
-				if(responseTree.get_optional<std::string>("okapi_output.status.content"))
-				{
-					result.error.message = responseTree.get<std::string>("okapi_output.status.content.text");
-					result.error.status = responseTree.get<std::string>("okapi_output.status.content.type");
-				}
-				else if(result.error.code == 401)
-				{
-					result.error.message = "You are unauthorized.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 404)
-				{
-					result.error.message = "URL not found.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 408)
-				{
-					result.error.message = "Got timeout when sending request.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 422)
-				{
-					result.error.message = "Probably wrong format.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 500)
-				{
-					result.error.message = "Internal Error.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 520)
-				{
-					result.error.message = "Got unknown exception, maybe wrong URL.";
-					result.error.status = "FATAL";
-				}
-				else
-				{
-					result.error.message = "Unknown Error.";
-					result.error.status = "FATAL";
-				}
-			}
-			else
-			{
-				if(responseTree.get_optional<std::string>("okapi_output.status.content"))
-				{
-					result.error.message = responseTree.get<std::string>("okapi_output.status.content.text");
-					result.error.status = responseTree.get<std::string>("okapi_output.status.content.type");
-				}
-			}
-		}
-		else
-		{
-			if(result.error.code != 200 && result.error.code != 202)
-			{
-				if(responseTree.get_optional<std::string>(".state_msgs"))
-				{
-					BOOST_FOREACH(boost::property_tree::ptree::value_type &v, responseTree.get_child(".state_msgs"))
-					{
-						result.error.message = v.second.get<std::string>("text");
-						result.error.status = v.second.get<std::string>("type");
-					}
-				}
-				else if(responseTree.get_optional<std::string>(".state_msg"))
-				{
-					result.error.message = responseTree.get<std::string>(".state_msg.text");
-					result.error.status = responseTree.get<std::string>(".state_msg.type");
-				}
-				else if(responseTree.get_optional<std::string>("state_msg"))
-				{
-					result.error.message = responseTree.get<std::string>("state_msg.text");
-					result.error.status = responseTree.get<std::string>("state_msg.type");
-				}
-				else if(result.error.code == 401)
-				{
-					result.error.message = "You are unauthorized.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 404)
-				{
-					result.error.message = "URL not found.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 408)
-				{
-					result.error.message = "Got timeout when sending request.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 422)
-				{
-					result.error.message = "Probably wrong format.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 500)
-				{
-					result.error.message = "Internal Error.";
-					result.error.status = "FATAL";
-				}
-				else if(result.error.code == 520)
-				{
-					result.error.message = "Got unknown exception, maybe wrong URL.";
-					result.error.status = "FATAL";
-				}
-				else
-				{
-					result.error.message = "Unknown Error.";
-					result.error.status = "FATAL";
-				}
-			}
-			else
-			{
-				if(responseTree.get_optional<std::string>(".state_msgs"))
-				{
-					BOOST_FOREACH(boost::property_tree::ptree::value_type &v, responseTree.get_child(".state_msgs"))
-					{
-						result.error.message = v.second.get<std::string>("text");
-						result.error.status = v.second.get<std::string>("type");
-					}
-				}
-				else if(responseTree.get_optional<std::string>(".state_msg"))
-				{
-					result.error.message = responseTree.get<std::string>(".state_msg.text");
-					result.error.status = responseTree.get<std::string>(".state_msg.type");
-				}
-				else if(responseTree.get_optional<std::string>("state_msg"))
-				{
-					result.error.message = responseTree.get<std::string>("state_msg.text");
-					result.error.status = responseTree.get<std::string>("state_msg.type");
-				}
-			}
-		}
-	}).wait();
+    if(result.error.code != 200 && result.error.code != 202)
+    {
+      if(responseTree.get_optional<std::string>("status"))
+      {
+        result.error.message = responseTree.get<std::string>("status.text");
+        result.error.status = responseTree.get<std::string>("status.type");
+      }
+      else if(result.error.code == 401)
+      {
+        result.error.message = "You are unauthorized.";
+        result.error.status = "FATAL";
+      }
+      else if(result.error.code == 404)
+      {
+        result.error.message = "URL not found.";
+        result.error.status = "FATAL";
+      }
+      else if(result.error.code == 408)
+      {
+        result.error.message = "Got timeout when sending request.";
+        result.error.status = "FATAL";
+      }
+      else if(result.error.code == 422)
+      {
+        result.error.message = "Probably wrong format.";
+        result.error.status = "FATAL";
+      }
+      else if(result.error.code == 500)
+      {
+        result.error.message = "Internal Error.";
+        result.error.status = "FATAL";
+      }
+      else if(result.error.code == 520)
+      {
+        result.error.message = "Got unknown exception, maybe wrong URL.";
+        result.error.status = "FATAL";
+      }
+      else
+      {
+        result.error.message = "Unknown Error.";
+        result.error.status = "FATAL";
+      }
+    }
+    else
+    {
+      if(responseTree.get_optional<std::string>("status"))
+      {
+        result.error.message = responseTree.get<std::string>("status.text");
+        result.error.status = responseTree.get<std::string>("status.type");
+      }
+    }
+  }).wait();
 	return result;
 }

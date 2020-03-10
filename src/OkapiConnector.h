@@ -24,24 +24,24 @@ public:
 	string accessToken;
 	string requestId;
 
-	struct CompleteError
+	struct Error
 	{
 		string message;
 		string status;
 		int code;
 	};
 
-	struct CompleteResult
+	struct Result
 	{
 		web::json::value body;
-		struct CompleteError error;
+		struct Error error;
 	};
 
-	CompleteResult init(method mtd, string username, string password);
+	Result init(method mtd, string username, string password);
 
-  CompleteResult sendRequest(string baseUrl, string endpoint, web::json::value requestBody);
+  Result sendRequest(string baseUrl, string endpoint, web::json::value requestBody);
 
-	CompleteResult getResult(string baseUrl, string endpoint, string requestId);
+	Result getResult(string baseUrl, string endpoint, string requestId, string resultType);
 
 };
 

@@ -1,4 +1,5 @@
 #include "OkapiConnector.h"
+#include <sys/stat.h>
 
 using std::cout;
 using std::endl;
@@ -12,10 +13,10 @@ using namespace web::http::client;
 /**
  * This is a little helper function. it retrieves the result from the backend. Polls for the result until it is ready.
  */
-OkapiConnector::CompleteResult retrieveResult(OkapiConnector connector, string baseUrl, string endpoint, string requestId)
+OkapiConnector::Result retrieveResult(OkapiConnector connector, string baseUrl, string endpoint, string requestId, string resultType)
 {
   // First call to the backend
-  OkapiConnector::CompleteResult result = connector.getResult(baseUrl, endpoint, requestId);
+  OkapiConnector::Result result = connector.getResult(baseUrl, endpoint, requestId, resultType);
   if (result.error.code != 200 && result.error.code != 202)
   {
     cout << "Retrieving response failed with status: " << result.error.status << endl;
@@ -25,13 +26,13 @@ OkapiConnector::CompleteResult retrieveResult(OkapiConnector connector, string b
   int i = 0;
   // Poll the backend until the result is ready and can be retrieved
   while (result.error.code == 202) {
-    result = connector.getResult(baseUrl, endpoint, requestId);
+    result = connector.getResult(baseUrl, endpoint, requestId, resultType);
     cout << "The request was successful. Your result is not ready yet.  Waiting: " << i << " s." << endl;
     i++;
     sleep(1);
   }
   // Final call to the backend
-  return connector.getResult(baseUrl, endpoint, requestId);
+  return connector.getResult(baseUrl, endpoint, requestId, resultType);
 }
 
 /**
@@ -97,7 +98,7 @@ void predictPassesTests(OkapiConnector connector, string baseUrl)
   passPredictionNumericalRequestBody[U("neptune_config")] = neptuneConfigSimple;
   
   // Send request for SGP4 pass prediction
-  OkapiConnector::CompleteResult responseSGP4 = connector.sendRequest(baseUrl, "/predict-passes/sgp4/requests", passPredictionRequestBody);
+  OkapiConnector::Result responseSGP4 = connector.sendRequest(baseUrl, "/predict-passes/sgp4/requests", passPredictionRequestBody);
   if (responseSGP4.error.code != 200 && responseSGP4.error.code != 202)
   {
     cout << "SGP4 request failed with status: " << responseSGP4.error.status << endl;
@@ -108,7 +109,7 @@ void predictPassesTests(OkapiConnector connector, string baseUrl)
   cout << "SGP4 request ID: " << requestIdPassPredictionSgp4 << endl;
   
   // Get results for SGP4 and print them in the terminal
-  OkapiConnector::CompleteResult sgp4SimpleResult = retrieveResult(connector, baseUrl, "/predict-passes/sgp4/simple/results/", requestIdPassPredictionSgp4);
+  OkapiConnector::Result sgp4SimpleResult = retrieveResult(connector, baseUrl, "/predict-passes/sgp4/results/", requestIdPassPredictionSgp4,"/simple");
   if (sgp4SimpleResult.error.code != 200 && sgp4SimpleResult.error.code != 202)
   {
     cout << "Response failed with status: " << sgp4SimpleResult.error.status << endl;
@@ -119,7 +120,7 @@ void predictPassesTests(OkapiConnector connector, string baseUrl)
     cout << sgp4SimpleResult.body.serialize() << endl;
   }
 
-  OkapiConnector::CompleteResult sgp4SummaryResult = retrieveResult(connector, baseUrl, "/predict-passes/sgp4/summary/results/", requestIdPassPredictionSgp4);
+  OkapiConnector::Result sgp4SummaryResult = retrieveResult(connector, baseUrl, "/predict-passes/sgp4/results/", requestIdPassPredictionSgp4,"/summary");
   if (sgp4SummaryResult.error.code != 200 && sgp4SummaryResult.error.code != 202)
   {
     cout << "Response failed with status: " << sgp4SummaryResult.error.status << endl;
@@ -167,7 +168,7 @@ void predictPassesTests(OkapiConnector connector, string baseUrl)
   
   
   // Send request for OREKIT pass prediction
-  OkapiConnector::CompleteResult responseOrekit = connector.sendRequest(baseUrl, "/predict-passes/orekit-numerical/requests", passPredictionNumericalRequestBody);
+  OkapiConnector::Result responseOrekit = connector.sendRequest(baseUrl, "/predict-passes/orekit-numerical/requests", passPredictionNumericalRequestBody);
   // Check response
   if (responseOrekit.error.code != 200 && responseOrekit.error.code != 202)
   {
@@ -178,7 +179,7 @@ void predictPassesTests(OkapiConnector connector, string baseUrl)
   cout << "Orekit request ID: " << requestIdPassPredictionOrekit << endl;
   
   // Get results for OREKIT and print them in the terminal
-  OkapiConnector::CompleteResult orekitSimpleResult = retrieveResult(connector, baseUrl, "/predict-passes/orekit-numerical/simple/results/", requestIdPassPredictionOrekit);
+  OkapiConnector::Result orekitSimpleResult = retrieveResult(connector, baseUrl, "/predict-passes/orekit-numerical/results/", requestIdPassPredictionOrekit,"/simple");
   if (orekitSimpleResult.error.code != 200 && orekitSimpleResult.error.code != 202)
   {
     cout << "Response failed with status: " << orekitSimpleResult.error.status << endl;
@@ -189,7 +190,7 @@ void predictPassesTests(OkapiConnector connector, string baseUrl)
     cout << orekitSimpleResult.body.serialize() << endl;
   }
   
-  OkapiConnector::CompleteResult orekitSummaryResult = retrieveResult(connector, baseUrl, "/predict-passes/orekit-numerical/summary/results/", requestIdPassPredictionOrekit);
+  OkapiConnector::Result orekitSummaryResult = retrieveResult(connector, baseUrl, "/predict-passes/orekit-numerical/results/", requestIdPassPredictionOrekit,"/summary");
   if (orekitSummaryResult.error.code != 200 && orekitSummaryResult.error.code != 202)
   {
     cout << "Response failed with status: " << orekitSummaryResult.error.status << endl;
@@ -247,7 +248,7 @@ void neptuneTest(OkapiConnector connector, string baseUrl)
   propagateNeptuneSimpleRequestBody[U("settings")] = settingsSimple;
 
   // Send request for NEPTUNE propagation
-  OkapiConnector::CompleteResult neptuneRequest = connector.sendRequest(baseUrl, "/propagate-orbit/neptune/requests", propagateNeptuneSimpleRequestBody);
+  OkapiConnector::Result neptuneRequest = connector.sendRequest(baseUrl, "/propagate-orbit/neptune/requests", propagateNeptuneSimpleRequestBody);
   if (neptuneRequest.error.code == 200 || neptuneRequest.error.code == 202)
   {
     cout << "Send NEPTUNE propagation request completed" << endl;
@@ -260,19 +261,7 @@ void neptuneTest(OkapiConnector connector, string baseUrl)
   cout << "Request ID: " << requestIdNeptune << endl;
 
   // Get results in simple format for NEPTUNE and print them in the terminal
-  OkapiConnector::CompleteResult neptuneSummaryResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/simple/results/", requestIdNeptune);
-  if (neptuneSummaryResult.error.code != 200 && neptuneSummaryResult.error.code != 202)
-  {
-    cout << "Response failed with status: " << neptuneSummaryResult.error.status << endl;
-    cout << neptuneSummaryResult.error.message << endl;
-  }
-  else
-  {
-    cout << neptuneSummaryResult.body.serialize() << endl;
-  }
-  
-  // Get results in generic format for NEPTUNE and print them in the terminal
-  OkapiConnector::CompleteResult neptuneGenericResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/simple/results/", requestIdNeptune + "/generic");
+  OkapiConnector::Result neptuneSummaryResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/results/", requestIdNeptune, "/simple");
   if (neptuneSummaryResult.error.code != 200 && neptuneSummaryResult.error.code != 202)
   {
     cout << "Response failed with status: " << neptuneSummaryResult.error.status << endl;
@@ -401,7 +390,7 @@ void neptuneOpmCovarianceTest(OkapiConnector connector, string baseUrl)
   propagateNeptuneSimpleRequestBody[U("settings")] = settingsOpm;
 
   // Send request for NEPTUNE propagation
-  OkapiConnector::CompleteResult neptuneRequest = connector.sendRequest(baseUrl, "/propagate-orbit/neptune/requests", propagateNeptuneSimpleRequestBody);
+  OkapiConnector::Result neptuneRequest = connector.sendRequest(baseUrl, "/propagate-orbit/neptune/requests", propagateNeptuneSimpleRequestBody);
   if (neptuneRequest.error.code == 200 || neptuneRequest.error.code == 202)
   {
     cout << "Send NEPTUNE propagation request completed" << endl;
@@ -414,7 +403,7 @@ void neptuneOpmCovarianceTest(OkapiConnector connector, string baseUrl)
   cout << "Request ID: " << requestIdNeptune << endl;
 
   // Get results in OPM format for NEPTUNE and print them in the terminal
-  OkapiConnector::CompleteResult neptuneResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/opm/results/", requestIdNeptune);
+  OkapiConnector::Result neptuneResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/results/", requestIdNeptune, "/opm");
   if (neptuneResult.error.code != 200 && neptuneResult.error.code != 202)
   {
     cout << "Response failed with status: " << neptuneResult.error.status << endl;
@@ -423,18 +412,6 @@ void neptuneOpmCovarianceTest(OkapiConnector connector, string baseUrl)
   else
   {
     cout << neptuneResult.body.serialize() << endl;
-  }
-  
-  // Get results in OPM format for NEPTUNE and print them in the terminal
-  OkapiConnector::CompleteResult neptuneGenericResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/opm/results/", requestIdNeptune + "/generic");
-  if (neptuneGenericResult.error.code != 200 && neptuneGenericResult.error.code != 202)
-  {
-    cout << "Response failed with status: " << neptuneGenericResult.error.status << endl;
-    cout << neptuneGenericResult.error.message << endl;
-  }
-  else
-  {
-    cout << neptuneGenericResult.body.serialize() << endl;
   }
 }
 
@@ -528,7 +505,7 @@ void neptuneOpmManeuvreTest(OkapiConnector connector, string baseUrl)
   propagateNeptuneSimpleRequestBody[U("settings")] = settingsOpm;
 
   // Send request for NEPTUNE propagation
-  OkapiConnector::CompleteResult neptuneRequest = connector.sendRequest(baseUrl, "/propagate-orbit/neptune/requests", propagateNeptuneSimpleRequestBody);
+  OkapiConnector::Result neptuneRequest = connector.sendRequest(baseUrl, "/propagate-orbit/neptune/requests", propagateNeptuneSimpleRequestBody);
   if (neptuneRequest.error.code == 200 || neptuneRequest.error.code == 202)
   {
     cout << "Send NEPTUNE propagation request completed" << endl;
@@ -541,7 +518,7 @@ void neptuneOpmManeuvreTest(OkapiConnector connector, string baseUrl)
   cout << "Request ID: " << requestIdNeptune << endl;
 
   // Get results in OPM format for NEPTUNE and print them in the terminal
-  OkapiConnector::CompleteResult neptuneResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/opm/results/", requestIdNeptune);
+  OkapiConnector::Result neptuneResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/opm/results/", requestIdNeptune, "/opm");
   if (neptuneResult.error.code != 200 && neptuneResult.error.code != 202)
   {
     cout << "Response failed with status: " << neptuneResult.error.status << endl;
@@ -550,18 +527,6 @@ void neptuneOpmManeuvreTest(OkapiConnector connector, string baseUrl)
   else
   {
     cout << neptuneResult.body.serialize() << endl;
-  }
-  
-  // Get results in OPM format for NEPTUNE and print them in the terminal
-  OkapiConnector::CompleteResult neptuneGenericResult = retrieveResult(connector, baseUrl, "/propagate-orbit/neptune/opm/results/", requestIdNeptune + "/generic");
-  if (neptuneGenericResult.error.code != 200 && neptuneGenericResult.error.code != 202)
-  {
-    cout << "Response failed with status: " << neptuneGenericResult.error.status << endl;
-    cout << neptuneGenericResult.error.message << endl;
-  }
-  else
-  {
-    cout << neptuneGenericResult.body.serialize() << endl;
   }
 }
 
@@ -613,7 +578,7 @@ void orekitNumericalTest(OkapiConnector connector, string baseUrl)
 
 
   // Send request for Orekit-numerical propagation
-  OkapiConnector::CompleteResult orekitRequest = connector.sendRequest(baseUrl, "/propagate-orbit/orekit-numerical/requests", propagateOrekitSimpleRequestBody);
+  OkapiConnector::Result orekitRequest = connector.sendRequest(baseUrl, "/propagate-orbit/orekit-numerical/requests", propagateOrekitSimpleRequestBody);
   if (orekitRequest.error.code == 200 || orekitRequest.error.code == 202)
   {
     cout << "Send Orekit-numerical propagation request completed" << endl;
@@ -626,7 +591,7 @@ void orekitNumericalTest(OkapiConnector connector, string baseUrl)
   cout << "Orekit-numerical request ID: " << requestIdOrekit << endl;
 
   // Get results in simple format for Orekit-numerical and print them in the terminal
-  OkapiConnector::CompleteResult orekitResult = retrieveResult(connector, baseUrl, "/propagate-orbit/orekit-numerical/simple/results/", requestIdOrekit);
+  OkapiConnector::Result orekitResult = retrieveResult(connector, baseUrl, "/propagate-orbit/orekit-numerical/results/", requestIdOrekit, "simple");
   if (orekitResult.error.code != 200 && orekitResult.error.code != 202)
   {
     cout << "Response failed with status: " << orekitResult.error.status << endl;
@@ -635,30 +600,6 @@ void orekitNumericalTest(OkapiConnector connector, string baseUrl)
   else
   {
     cout << orekitResult.body.serialize() << endl;
-  }
-  
-  // Get results in OPM format for Orekit-numerical and print them in the terminal
-  OkapiConnector::CompleteResult orekitOpmGenericResult = retrieveResult(connector, baseUrl, "/propagate-orbit/orekit-numerical/opm/results/", requestIdOrekit + "/generic");
-  if (orekitOpmGenericResult.error.code != 200 && orekitOpmGenericResult.error.code != 202)
-  {
-    cout << "Response failed with status: " << orekitOpmGenericResult.error.status << endl;
-    cout << orekitOpmGenericResult.error.message << endl;
-  }
-  else
-  {
-    cout << orekitOpmGenericResult.body.serialize() << endl;
-  }
-  
-  // Get results in generic simple format for Orekit-numerical and print them in the terminal
-  OkapiConnector::CompleteResult orekitGenericResult = retrieveResult(connector, baseUrl, "/propagate-orbit/orekit-numerical/simple/results/", requestIdOrekit + "/generic");
-  if (orekitGenericResult.error.code != 200 && orekitGenericResult.error.code != 202)
-  {
-    cout << "Response failed with status: " << orekitGenericResult.error.status << endl;
-    cout << orekitGenericResult.error.message << endl;
-  }
-  else
-  {
-    cout << orekitGenericResult.body.serialize() << endl;
   }
 }
 
@@ -679,7 +620,7 @@ void sgp4Test(OkapiConnector connector, string baseUrl)
   propagateSgp4RequestBody[U("settings")] = settingsSgp4;
   
   // Send request for SGP4 propagation
-  OkapiConnector::CompleteResult sgp4Request = connector.sendRequest(baseUrl, "/propagate-orbit/sgp4/requests", propagateSgp4RequestBody);
+  OkapiConnector::Result sgp4Request = connector.sendRequest(baseUrl, "/propagate-orbit/sgp4/requests", propagateSgp4RequestBody);
   if (sgp4Request.error.code == 200 || sgp4Request.error.code == 202)
   {
     cout << "Send SGP4 propagation request completed" << endl;
@@ -692,7 +633,7 @@ void sgp4Test(OkapiConnector connector, string baseUrl)
   cout << "SGP4 request ID: " << requestIdSgp4 << endl;
   
   // Get results in simple format for SGP4
-  OkapiConnector::CompleteResult sgp4Result = retrieveResult(connector, baseUrl, "/propagate-orbit/sgp4/simple/results/", requestIdSgp4);
+  OkapiConnector::Result sgp4Result = retrieveResult(connector, baseUrl, "/propagate-orbit/sgp4/results/", requestIdSgp4, "/simple");
   if (sgp4Result.error.code != 200 && sgp4Result.error.code != 202)
   {
     cout << "Retrieving SGP4 propagation simple response failed with status: " << sgp4Result.error.status << endl;
@@ -703,7 +644,7 @@ void sgp4Test(OkapiConnector connector, string baseUrl)
   }
   
   // Get results in OMM format for SGP4
-  OkapiConnector::CompleteResult sgp4OmmResult = retrieveResult(connector, baseUrl, "/propagate-orbit/sgp4/omm/results/", requestIdSgp4);
+  OkapiConnector::Result sgp4OmmResult = retrieveResult(connector, baseUrl, "/propagate-orbit/sgp4/omm/results/", requestIdSgp4, "/omm");
   if (sgp4OmmResult.error.code != 200 && sgp4OmmResult.error.code != 202)
   {
     cout << "Retrieving SGP4 propagation OMM response failed with status: " << sgp4OmmResult.error.status << endl;
@@ -713,324 +654,37 @@ void sgp4Test(OkapiConnector connector, string baseUrl)
     cout << sgp4OmmResult.body.serialize() << endl;
   }
   
-  // Get results in OMM generic format for SGP4
-  OkapiConnector::CompleteResult sgp4OmmGenericResult = retrieveResult(connector, baseUrl, "/propagate-orbit/sgp4/omm/results/", requestIdSgp4 + "/generic");
-  if (sgp4OmmGenericResult.error.code != 200 && sgp4OmmGenericResult.error.code != 202)
-  {
-    cout << "Retrieving SGP4 propagation OMM response failed with status: " << sgp4OmmResult.error.status << endl;
-    cout << sgp4OmmGenericResult.error.message << endl;
-  }
-  if (sgp4OmmGenericResult.error.code == 200) {
-    cout << sgp4OmmGenericResult.body.serialize() << endl;
-  }
-  
 }
 
 void riskEstimationTest(OkapiConnector connector, string baseUrl)
 {
 
   web::json::value riskBody;
+  web::json::value conjunction;
   web::json::value ccsds_cdm;
   web::json::value overrides;
   web::json::value covarianceScalingRange;
   
-  ccsds_cdm[U("CONSTELLATION")] = web::json::value::string("OKAPI");
-  ccsds_cdm[U("CDM_ID")] = web::json::value::string("24537247");
-  ccsds_cdm[U("FILENAME")] = web::json::value::string("1234_conj_5678_202001_1234.xml");
-  ccsds_cdm[U("INSERT_EPOCH")] = web::json::value::string("2020-01-20 11:37:59");
-  ccsds_cdm[U("CCSDS_CDM_VERS")] = web::json::value::string("1.0");
-  ccsds_cdm[U("CREATION_DATE")] = web::json::value::string("2020-01-20 07:38:19");
-  ccsds_cdm[U("CREATION_DATE_FRACTION")] = web::json::value::string("0");
-  ccsds_cdm[U("ORIGINATOR")] = web::json::value::string("JSPOC");
-  ccsds_cdm[U("MESSAGE_FOR")] = web::json::value::string("OKAPISat");
-  ccsds_cdm[U("MESSAGE_ID")] = web::json::value::string("1234_conj_5678_202001_1234");
-  ccsds_cdm[U("TCA")] = web::json::value::string("2020-01-20 09:28:20");
-  ccsds_cdm[U("TCA_FRACTION")] = web::json::value::string("23");
-  ccsds_cdm[U("MISS_DISTANCE")] = web::json::value::string("800");
-  ccsds_cdm[U("MISS_DISTANCE_UNIT")] = web::json::value::string("m");
-  ccsds_cdm[U("RELATIVE_SPEED")] = web::json::value::string("14990");
-  ccsds_cdm[U("RELATIVE_SPEED_UNIT")] = web::json::value::string("m\\/s");
-  ccsds_cdm[U("RELATIVE_POSITION_R")] = web::json::value::string("-71.0");
-  ccsds_cdm[U("RELATIVE_POSITION_R_UNIT")] = web::json::value::string("m");
-  ccsds_cdm[U("RELATIVE_POSITION_T")] = web::json::value::string("110.0");
-  ccsds_cdm[U("RELATIVE_POSITION_T_UNIT")] = web::json::value::string("m");
-  ccsds_cdm[U("RELATIVE_POSITION_N")] = web::json::value::string("793.0");
-  ccsds_cdm[U("RELATIVE_POSITION_N_UNIT")] = web::json::value::string("m");
-  ccsds_cdm[U("RELATIVE_VELOCITY_R")] = web::json::value::string("11.0");
-  ccsds_cdm[U("RELATIVE_VELOCITY_R_UNIT")] = web::json::value::string("m\\/s");
-  ccsds_cdm[U("RELATIVE_VELOCITY_T")] = web::json::value::string("-14850");
-  ccsds_cdm[U("RELATIVE_VELOCITY_T_UNIT")] = web::json::value::string("m\\/s");
-  ccsds_cdm[U("RELATIVE_VELOCITY_N")] = web::json::value::string("2053.0");
-  ccsds_cdm[U("RELATIVE_VELOCITY_N_UNIT")] = web::json::value::string("m\\/s");
-  ccsds_cdm[U("COLLISION_PROBABILITY")] = web::json::value::string("0");
-  ccsds_cdm[U("COLLISION_PROBABILITY_METHOD")] = web::json::value::string("FOSTER-1992");
-  ccsds_cdm[U("SAT1_OBJECT")] = web::json::value::string("OBJECT1");
-  ccsds_cdm[U("SAT1_OBJECT_DESIGNATOR")] = web::json::value::string("1234");
-  ccsds_cdm[U("SAT1_CATALOG_NAME")] = web::json::value::string("SATCAT");
-  ccsds_cdm[U("SAT1_OBJECT_NAME")] = web::json::value::string("OKAPISat");
-  ccsds_cdm[U("SAT1_INTERNATIONAL_DESIGNATOR")] = web::json::value::string("2021-001E");
-  ccsds_cdm[U("SAT1_OBJECT_TYPE")] = web::json::value::string("PAYLOAD");
-  ccsds_cdm[U("SAT1_OPERATOR_CONTACT_POSITION")] = web::json::value::string("https:\\/\\/www.space-track.org\\/expandedspacedata\\/query\\/class\\/organization\\/object\\/~~1234\\/orderby\\/ORG_NAME,INFO_ID\\/format\\/html\\/emptyresult\\/show\\/");
-  ccsds_cdm[U("SAT1_OPERATOR_ORGANIZATION")] = web::json::value::string("OKAPI");
-  ccsds_cdm[U("SAT1_OPERATOR_PHONE")] = web::json::value::string("https:\\/\\/www.space-track.org\\/expandedspacedata\\/query\\/class\\/organization\\/object\\/~~1234\\/orderby\\/ORG_NAME,INFO_ID\\/format\\/html\\/emptyresult\\/show\\/");
-  ccsds_cdm[U("SAT1_OPERATOR_EMAIL")] = web::json::value::string("https:\\/\\/www.space-track.org\\/expandedspacedata\\/query\\/class\\/organization\\/object\\/~~1234\\/orderby\\/ORG_NAME,INFO_ID\\/format\\/html\\/emptyresult\\/show\\/");
-  ccsds_cdm[U("SAT1_EPHEMERIS_NAME")] = web::json::value::string("NONE");
-  ccsds_cdm[U("SAT1_COVARIANCE_METHOD")] = web::json::value::string("CALCULATED");
-  ccsds_cdm[U("SAT1_MANEUVERABLE")] = web::json::value::string("NO");
-  ccsds_cdm[U("SAT1_REF_FRAME")] = web::json::value::string("ITRF");
-  ccsds_cdm[U("SAT1_GRAVITY_MODEL")] = web::json::value::string("EGM-96: 36D 36O");
-  ccsds_cdm[U("SAT1_ATMOSPHERIC_MODEL")] = web::json::value::string("JBH09");
-  ccsds_cdm[U("SAT1_N_BODY_PERTURBATIONS")] = web::json::value::string("MOON,SUN");
-  ccsds_cdm[U("SAT1_SOLAR_RAD_PRESSURE")] = web::json::value::string("YES");
-  ccsds_cdm[U("SAT1_EARTH_TIDES")] = web::json::value::string("YES");
-  ccsds_cdm[U("SAT1_INTRACK_THRUST")] = web::json::value::string("NO");
-  ccsds_cdm[U("SAT1_TIME_LASTOB_START")] = web::json::value::string("2020-01-19 07:38:19");
-  ccsds_cdm[U("SAT1_TIME_LASTOB_START_FRACTION")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_TIME_LASTOB_END")] = web::json::value::string("2020-01-20 07:38:19");
-  ccsds_cdm[U("SAT1_TIME_LASTOB_END_FRACTION")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_RECOMMENDED_OD_SPAN")] = web::json::value::string("7.02");
-  ccsds_cdm[U("SAT1_RECOMMENDED_OD_SPAN_UNIT")] = web::json::value::string("d");
-  ccsds_cdm[U("SAT1_ACTUAL_OD_SPAN")] = web::json::value::string("7.02");
-  ccsds_cdm[U("SAT1_ACTUAL_OD_SPAN_UNIT")] = web::json::value::string("d");
-  ccsds_cdm[U("SAT1_OBS_AVAILABLE")] = web::json::value::string("183");
-  ccsds_cdm[U("SAT1_OBS_USED")] = web::json::value::string("183");
-  ccsds_cdm[U("SAT1_RESIDUALS_ACCEPTED")] = web::json::value::string("98.0");
-  ccsds_cdm[U("SAT1_RESIDUALS_ACCEPTED_UNIT")] = web::json::value::string("%");
-  ccsds_cdm[U("SAT1_WEIGHTED_RMS")] = web::json::value::string("1.013");
-  ccsds_cdm[U("SAT1_COMMENT_APOGEE")] = web::json::value::string("Apogee Altitude = 601   [km]");
-  ccsds_cdm[U("SAT1_COMMENT_PERIGEE")] = web::json::value::string("Perigee Altitude = 600   [km]");
-  ccsds_cdm[U("SAT1_COMMENT_INCLINATION")] = web::json::value::string("Inclination = 97.0  [deg]");
-  ccsds_cdm[U("SAT1_AREA_PC")] = web::json::value::string("0.4");
-  ccsds_cdm[U("SAT1_AREA_PC_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT1_CD_AREA_OVER_MASS")] = web::json::value::string("0.02");
-  ccsds_cdm[U("SAT1_CD_AREA_OVER_MASS_UNIT")] = web::json::value::string("m**2\\/kg");
-  ccsds_cdm[U("SAT1_CR_AREA_OVER_MASS")] = web::json::value::string("0.009");
-  ccsds_cdm[U("SAT1_CR_AREA_OVER_MASS_UNIT")] = web::json::value::string("m**2\\/kg");
-  ccsds_cdm[U("SAT1_THRUST_ACCELERATION")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_THRUST_ACCELERATION_UNIT")] = web::json::value::string("m\\/s**2");
-  ccsds_cdm[U("SAT1_SEDR")] = web::json::value::string("5.9e-05");
-  ccsds_cdm[U("SAT1_SEDR_UNIT")] = web::json::value::string("W\\/kg");
-  ccsds_cdm[U("SAT1_X")] = web::json::value::string("6562.2804");
-  ccsds_cdm[U("SAT1_X_UNIT")] = web::json::value::string("km");
-  ccsds_cdm[U("SAT1_Y")] = web::json::value::string("1703.04577");
-  ccsds_cdm[U("SAT1_Y_UNIT")] = web::json::value::string("km");
-  ccsds_cdm[U("SAT1_Z")] = web::json::value::string("1592.077551");
-  ccsds_cdm[U("SAT1_Z_UNIT")] = web::json::value::string("km");
-  ccsds_cdm[U("SAT1_X_DOT")] = web::json::value::string("-1.28827778");
-  ccsds_cdm[U("SAT1_X_DOT_UNIT")] = web::json::value::string("km\\/s");
-  ccsds_cdm[U("SAT1_Y_DOT")] = web::json::value::string("-1.90418306");
-  ccsds_cdm[U("SAT1_Y_DOT_UNIT")] = web::json::value::string("km\\/s");
-  ccsds_cdm[U("SAT1_Z_DOT")] = web::json::value::string("7.30255187");
-  ccsds_cdm[U("SAT1_Z_DOT_UNIT")] = web::json::value::string("km\\/s");
-  ccsds_cdm[U("SAT1_CR_R")] = web::json::value::string("46.1461856511049");
-  ccsds_cdm[U("SAT1_CR_R_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT1_CT_R")] = web::json::value::string("42.3471255956732");
-  ccsds_cdm[U("SAT1_CT_R_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT1_CT_T")] = web::json::value::string("302.242625462294");
-  ccsds_cdm[U("SAT1_CT_T_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT1_CN_R")] = web::json::value::string("2.33965674350612");
-  ccsds_cdm[U("SAT1_CN_R_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT1_CN_T")] = web::json::value::string("-7.52607416991497");
-  ccsds_cdm[U("SAT1_CN_T_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT1_CN_N")] = web::json::value::string("26.3489367881701");
-  ccsds_cdm[U("SAT1_CN_N_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT1_CRDOT_R")] = web::json::value::string("-0.0547784235749886");
-  ccsds_cdm[U("SAT1_CRDOT_R_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CRDOT_T")] = web::json::value::string("-0.295120151146788");
-  ccsds_cdm[U("SAT1_CRDOT_T_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CRDOT_N")] = web::json::value::string("-0.000325743726599067");
-  ccsds_cdm[U("SAT1_CRDOT_N_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CRDOT_RDOT")] = web::json::value::string("0.00031032143490407");
-  ccsds_cdm[U("SAT1_CRDOT_RDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT1_CTDOT_R")] = web::json::value::string("-0.0501856442302755");
-  ccsds_cdm[U("SAT1_CTDOT_R_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CTDOT_T")] = web::json::value::string("-0.0471861244930156");
-  ccsds_cdm[U("SAT1_CTDOT_T_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CTDOT_N")] = web::json::value::string("-0.00252782542649572");
-  ccsds_cdm[U("SAT1_CTDOT_N_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CTDOT_RDOT")] = web::json::value::string("6.07418730203252e-05");
-  ccsds_cdm[U("SAT1_CTDOT_RDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT1_CTDOT_TDOT")] = web::json::value::string("5.45874543922052e-05");
-  ccsds_cdm[U("SAT1_CTDOT_TDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT1_CNDOT_R")] = web::json::value::string("-0.00751381926357464");
-  ccsds_cdm[U("SAT1_CNDOT_R_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CNDOT_T")] = web::json::value::string("-0.00371414808055227");
-  ccsds_cdm[U("SAT1_CNDOT_T_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CNDOT_N")] = web::json::value::string("-0.0113588008096445");
-  ccsds_cdm[U("SAT1_CNDOT_N_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT1_CNDOT_RDOT")] = web::json::value::string("1.09417486735304e-05");
-  ccsds_cdm[U("SAT1_CNDOT_RDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT1_CNDOT_TDOT")] = web::json::value::string("8.17704363245973e-06");
-  ccsds_cdm[U("SAT1_CNDOT_TDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT1_CNDOT_NDOT")] = web::json::value::string("1.74453648788543e-05");
-  ccsds_cdm[U("SAT1_CNDOT_NDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT1_CDRG_R")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CDRG_R_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT1_CDRG_T")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CDRG_T_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT1_CDRG_N")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CDRG_N_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT1_CDRG_RDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CDRG_RDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT1_CDRG_TDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CDRG_TDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT1_CDRG_NDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CDRG_NDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT1_CDRG_DRG")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CDRG_DRG_UNIT")] = web::json::value::string("m**4\\/kg**2");
-  ccsds_cdm[U("SAT1_CSRP_R")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CSRP_R_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT1_CSRP_T")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CSRP_T_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT1_CSRP_N")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CSRP_N_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT1_CSRP_RDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CSRP_RDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT1_CSRP_TDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CSRP_TDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT1_CSRP_NDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CSRP_NDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT1_CSRP_DRG")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CSRP_DRG_UNIT")] = web::json::value::string("m**4\\/kg**2");
-  ccsds_cdm[U("SAT1_CSRP_SRP")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT1_CSRP_SRP_UNIT")] = web::json::value::string("m**4\\/kg**2");
-  ccsds_cdm[U("SAT2_OBJECT")] = web::json::value::string("OBJECT2");
-  ccsds_cdm[U("SAT2_OBJECT_DESIGNATOR")] = web::json::value::string("5678");
-  ccsds_cdm[U("SAT2_CATALOG_NAME")] = web::json::value::string("SATCAT");
-  ccsds_cdm[U("SAT2_OBJECT_NAME")] = web::json::value::string("OBJECT 2");
-  ccsds_cdm[U("SAT2_INTERNATIONAL_DESIGNATOR")] = web::json::value::string("1954-00-1");
-  ccsds_cdm[U("SAT2_OBJECT_TYPE")] = web::json::value::string("TBA");
-  ccsds_cdm[U("SAT2_OPERATOR_CONTACT_POSITION")] = web::json::value::string("https:\\/\\/www.space-track.org\\/expandedspacedata\\/query\\/class\\/organization\\/object\\/~~5678\\/orderby\\/ORG_NAME,INFO_ID\\/format\\/html\\/emptyresult\\/show\\/");
-  ccsds_cdm[U("SAT2_OPERATOR_ORGANIZATION")] = web::json::value::string("NONE");
-  ccsds_cdm[U("SAT2_OPERATOR_PHONE")] = web::json::value::string("https:\\/\\/www.space-track.org\\/expandedspacedata\\/query\\/class\\/organization\\/object\\/~~5678\\/orderby\\/ORG_NAME,INFO_ID\\/format\\/html\\/emptyresult\\/show\\/");
-  ccsds_cdm[U("SAT2_OPERATOR_EMAIL")] = web::json::value::string("https:\\/\\/www.space-track.org\\/expandedspacedata\\/query\\/class\\/organization\\/object\\/~~5678\\/orderby\\/ORG_NAME,INFO_ID\\/format\\/html\\/emptyresult\\/show\\/");
-  ccsds_cdm[U("SAT2_EPHEMERIS_NAME")] = web::json::value::string("NONE");
-  ccsds_cdm[U("SAT2_COVARIANCE_METHOD")] = web::json::value::string("CALCULATED");
-  ccsds_cdm[U("SAT2_MANEUVERABLE")] = web::json::value::string("N\\/A");
-  ccsds_cdm[U("SAT2_REF_FRAME")] = web::json::value::string("ITRF");
-  ccsds_cdm[U("SAT2_GRAVITY_MODEL")] = web::json::value::string("EGM-96: 36D 36O");
-  ccsds_cdm[U("SAT2_ATMOSPHERIC_MODEL")] = web::json::value::string("JBH09");
-  ccsds_cdm[U("SAT2_N_BODY_PERTURBATIONS")] = web::json::value::string("MOON,SUN");
-  ccsds_cdm[U("SAT2_SOLAR_RAD_PRESSURE")] = web::json::value::string("YES");
-  ccsds_cdm[U("SAT2_EARTH_TIDES")] = web::json::value::string("YES");
-  ccsds_cdm[U("SAT2_INTRACK_THRUST")] = web::json::value::string("NO");
-  ccsds_cdm[U("SAT2_TIME_LASTOB_START")] = web::json::value::string("2020-01-19 07:38:19");
-  ccsds_cdm[U("SAT2_TIME_LASTOB_START_FRACTION")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_TIME_LASTOB_END")] = web::json::value::string("2020-01-20 07:38:19");
-  ccsds_cdm[U("SAT2_TIME_LASTOB_END_FRACTION")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_RECOMMENDED_OD_SPAN")] = web::json::value::string("7.12");
-  ccsds_cdm[U("SAT2_RECOMMENDED_OD_SPAN_UNIT")] = web::json::value::string("d");
-  ccsds_cdm[U("SAT2_ACTUAL_OD_SPAN")] = web::json::value::string("7.12");
-  ccsds_cdm[U("SAT2_ACTUAL_OD_SPAN_UNIT")] = web::json::value::string("d");
-  ccsds_cdm[U("SAT2_OBS_AVAILABLE")] = web::json::value::string("140");
-  ccsds_cdm[U("SAT2_OBS_USED")] = web::json::value::string("138");
-  ccsds_cdm[U("SAT2_RESIDUALS_ACCEPTED")] = web::json::value::string("99.4");
-  ccsds_cdm[U("SAT2_RESIDUALS_ACCEPTED_UNIT")] = web::json::value::string("%");
-  ccsds_cdm[U("SAT2_WEIGHTED_RMS")] = web::json::value::string("1.12");
-  ccsds_cdm[U("SAT2_COMMENT_APOGEE")] = web::json::value::string("Apogee Altitude = 601   [km]");
-  ccsds_cdm[U("SAT2_COMMENT_PERIGEE")] = web::json::value::string("Perigee Altitude = 600   [km]");
-  ccsds_cdm[U("SAT2_COMMENT_INCLINATION")] = web::json::value::string("Inclination = 97.0  [deg]");
-  ccsds_cdm[U("SAT2_AREA_PC")] = web::json::value::string("0.06");
-  ccsds_cdm[U("SAT2_AREA_PC_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT2_CD_AREA_OVER_MASS")] = web::json::value::string("0.03");
-  ccsds_cdm[U("SAT2_CD_AREA_OVER_MASS_UNIT")] = web::json::value::string("m**2\\/kg");
-  ccsds_cdm[U("SAT2_CR_AREA_OVER_MASS")] = web::json::value::string("0.01");
-  ccsds_cdm[U("SAT2_CR_AREA_OVER_MASS_UNIT")] = web::json::value::string("m**2\\/kg");
-  ccsds_cdm[U("SAT2_THRUST_ACCELERATION")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_THRUST_ACCELERATION_UNIT")] = web::json::value::string("m\\/s**2");
-  ccsds_cdm[U("SAT2_SEDR")] = web::json::value::string("8.2e-05");
-  ccsds_cdm[U("SAT2_SEDR_UNIT")] = web::json::value::string("W\\/kg");
-  ccsds_cdm[U("SAT2_X")] = web::json::value::string("6562.413913");
-  ccsds_cdm[U("SAT2_X_UNIT")] = web::json::value::string("km");
-  ccsds_cdm[U("SAT2_Y")] = web::json::value::string("1702.252966");
-  ccsds_cdm[U("SAT2_Y_UNIT")] = web::json::value::string("km");
-  ccsds_cdm[U("SAT2_Z")] = web::json::value::string("1592.063015");
-  ccsds_cdm[U("SAT2_Z_UNIT")] = web::json::value::string("km");
-  ccsds_cdm[U("SAT2_X_DOT")] = web::json::value::string("2.046814905");
-  ccsds_cdm[U("SAT2_X_DOT_UNIT")] = web::json::value::string("km\\/s");
-  ccsds_cdm[U("SAT2_Y_DOT")] = web::json::value::string("-1.062667288");
-  ccsds_cdm[U("SAT2_Y_DOT_UNIT")] = web::json::value::string("km\\/s");
-  ccsds_cdm[U("SAT2_Z_DOT")] = web::json::value::string("-7.2948262");
-  ccsds_cdm[U("SAT2_Z_DOT_UNIT")] = web::json::value::string("km\\/s");
-  ccsds_cdm[U("SAT2_CR_R")] = web::json::value::string("99.9911568880684");
-  ccsds_cdm[U("SAT2_CR_R_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT2_CT_R")] = web::json::value::string("-85.5596052003614");
-  ccsds_cdm[U("SAT2_CT_R_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT2_CT_T")] = web::json::value::string("679.619604230875");
-  ccsds_cdm[U("SAT2_CT_T_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT2_CN_R")] = web::json::value::string("27.0614673334493");
-  ccsds_cdm[U("SAT2_CN_R_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT2_CN_T")] = web::json::value::string("-16.6568273265456");
-  ccsds_cdm[U("SAT2_CN_T_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT2_CN_N")] = web::json::value::string("63.3048647153926");
-  ccsds_cdm[U("SAT2_CN_N_UNIT")] = web::json::value::string("m**2");
-  ccsds_cdm[U("SAT2_CRDOT_R")] = web::json::value::string("0.107056879196751");
-  ccsds_cdm[U("SAT2_CRDOT_R_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CRDOT_T")] = web::json::value::string("-0.659964067622497");
-  ccsds_cdm[U("SAT2_CRDOT_T_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CRDOT_N")] = web::json::value::string("0.019485753052086");
-  ccsds_cdm[U("SAT2_CRDOT_N_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CRDOT_RDOT")] = web::json::value::string("0.000708585747151425");
-  ccsds_cdm[U("SAT2_CRDOT_RDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT2_CTDOT_R")] = web::json::value::string("-0.108846482024542");
-  ccsds_cdm[U("SAT2_CTDOT_R_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CTDOT_T")] = web::json::value::string("0.0926867959261093");
-  ccsds_cdm[U("SAT2_CTDOT_T_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CTDOT_N")] = web::json::value::string("-0.0294861841043052");
-  ccsds_cdm[U("SAT2_CTDOT_N_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CTDOT_RDOT")] = web::json::value::string("-0.000115870505266814");
-  ccsds_cdm[U("SAT2_CTDOT_RDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT2_CTDOT_TDOT")] = web::json::value::string("0.000118496023294848");
-  ccsds_cdm[U("SAT2_CTDOT_TDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT2_CNDOT_R")] = web::json::value::string("-0.0141976572926528");
-  ccsds_cdm[U("SAT2_CNDOT_R_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CNDOT_T")] = web::json::value::string("0.0382956717994341");
-  ccsds_cdm[U("SAT2_CNDOT_T_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CNDOT_N")] = web::json::value::string("-0.00809689080893274");
-  ccsds_cdm[U("SAT2_CNDOT_N_UNIT")] = web::json::value::string("m**2\\/s");
-  ccsds_cdm[U("SAT2_CNDOT_RDOT")] = web::json::value::string("-2.78052024499934e-05");
-  ccsds_cdm[U("SAT2_CNDOT_RDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT2_CNDOT_TDOT")] = web::json::value::string("1.54543876352614e-05");
-  ccsds_cdm[U("SAT2_CNDOT_TDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT2_CNDOT_NDOT")] = web::json::value::string("2.37648026501431e-05");
-  ccsds_cdm[U("SAT2_CNDOT_NDOT_UNIT")] = web::json::value::string("m**2\\/s**2");
-  ccsds_cdm[U("SAT2_CDRG_R")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CDRG_R_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT2_CDRG_T")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CDRG_T_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT2_CDRG_N")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CDRG_N_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT2_CDRG_RDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CDRG_RDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT2_CDRG_TDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CDRG_TDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT2_CDRG_NDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CDRG_NDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT2_CDRG_DRG")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CDRG_DRG_UNIT")] = web::json::value::string("m**4\\/kg**2");
-  ccsds_cdm[U("SAT2_CSRP_R")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CSRP_R_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT2_CSRP_T")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CSRP_T_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT2_CSRP_N")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CSRP_N_UNIT")] = web::json::value::string("m**3\\/kg");
-  ccsds_cdm[U("SAT2_CSRP_RDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CSRP_RDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT2_CSRP_TDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CSRP_TDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT2_CSRP_NDOT")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CSRP_NDOT_UNIT")] = web::json::value::string("m**3\\/(kg*s)");
-  ccsds_cdm[U("SAT2_CSRP_DRG")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CSRP_DRG_UNIT")] = web::json::value::string("m**4\\/kg**2");
-  ccsds_cdm[U("SAT2_CSRP_SRP")] = web::json::value::string("0");
-  ccsds_cdm[U("SAT2_CSRP_SRP_UNIT")] = web::json::value::string("m**4\\/kg**2");
-  ccsds_cdm[U("GID")] = web::json::value::string("79");
+  string cdmFile = "cdm.json";
+  struct stat buffer;
+  if (!(stat(cdmFile.c_str(), &buffer) == 0)) {
+    cout << "No cdm.json file found. Skipping risk estimation test" << endl;
+    return;
+  }
   
-  riskBody[U("CCSDS_CDM")] = ccsds_cdm;
+  // Read the json file
+  std::ifstream cdm_file(cdmFile);
+  stringstream_t stringStream;
+  stringStream << cdm_file.rdbuf();
+  cdm_file.close();
+  ccsds_cdm = json::value::parse(stringStream);
   
+  conjunction[U("type")] = web::json::value::string("cdm.json");
+  conjunction[U("content")] = ccsds_cdm[0];
+  riskBody[U("conjunction")] = conjunction;
   
   // Send request for risk estimation
-  OkapiConnector::CompleteResult riskEstimationRequest = connector.sendRequest(baseUrl, "/estimate-risk/all-methods/requests", riskBody);
+  OkapiConnector::Result riskEstimationRequest = connector.sendRequest(baseUrl, "/estimate-risk/alfano-2005/requests", riskBody);
   if (riskEstimationRequest.error.code == 200 || riskEstimationRequest.error.code == 202)
   {
     cout << "Send risk estimation request completed" << endl;
@@ -1043,7 +697,7 @@ void riskEstimationTest(OkapiConnector connector, string baseUrl)
   cout << "Risk estimation request ID: " << requestIdRiskEstimation << endl;
 
   // Get results for risk estimation
-  OkapiConnector::CompleteResult riskEstimationResult = retrieveResult(connector, baseUrl, "/estimate-risk/all-methods/simple/results/", requestIdRiskEstimation);
+  OkapiConnector::Result riskEstimationResult = retrieveResult(connector, baseUrl, "/estimate-risk/alfano-2005/results/", requestIdRiskEstimation, "/simple");
   if (riskEstimationResult.error.code != 200 && riskEstimationResult.error.code != 202)
   {
     cout << "Retrieving risk estimation response failed with status: " << riskEstimationResult.error.status << endl;
@@ -1052,39 +706,39 @@ void riskEstimationTest(OkapiConnector connector, string baseUrl)
   if (riskEstimationResult.error.code == 200) {
     cout << riskEstimationResult.body.serialize() << endl;
   }
-  
-  // Now we run a scenario where the along-track component of the covariances of both objects are scaled
-  covarianceScalingRange[U("lower_bound")] = 0.1;
-  covarianceScalingRange[U("upper_bound")] = 1.0;
-  covarianceScalingRange[U("step_size")] = 0.1;
-  overrides[U("SAT1_COVARIANCE_T_SCALING_RANGE")] = covarianceScalingRange;
-  overrides[U("SAT2_COVARIANCE_T_SCALING_RANGE")] = covarianceScalingRange;
-  
-  riskBody[U("overrides")] = overrides;
-  
-  // Send request for risk estimation with overrides
-  riskEstimationRequest = connector.sendRequest(baseUrl, "/estimate-risk/foster-1992/requests", riskBody);
-  if (riskEstimationRequest.error.code == 200 || riskEstimationRequest.error.code == 202)
-  {
-    cout << "Send risk estimation request completed" << endl;
-  }
-  else {
-    cout << "Risk estimation request failed with status: " << riskEstimationRequest.error.status << endl;
-    cout << riskEstimationRequest.error.message << endl;
-  }
-  requestIdRiskEstimation = connector.requestId;
-  cout << "Risk estimation request ID: " << requestIdRiskEstimation << endl;
 
-  // get results for risk estimation
-  riskEstimationResult = retrieveResult(connector, baseUrl, "/estimate-risk/foster-1992/simple/results/", requestIdRiskEstimation);
-  if (riskEstimationResult.error.code != 200 && riskEstimationResult.error.code != 202)
-  {
-    cout << "Retrieving risk estimation response failed with status: " << riskEstimationResult.error.status << endl;
-    cout << riskEstimationResult.error.message << endl;
-  }
-  if (riskEstimationResult.error.code == 200) {
-    cout << riskEstimationResult.body.serialize() << endl;
-  }
+//  // Now we run a scenario where the along-track component of the covariances of both objects are scaled
+//  covarianceScalingRange[U("lower_bound")] = 0.1;
+//  covarianceScalingRange[U("upper_bound")] = 1.0;
+//  covarianceScalingRange[U("step_size")] = 0.1;
+//  overrides[U("SAT1_COVARIANCE_T_SCALING_RANGE")] = covarianceScalingRange;
+//  overrides[U("SAT2_COVARIANCE_T_SCALING_RANGE")] = covarianceScalingRange;
+//
+//  riskBody[U("overrides")] = overrides;
+//
+//  // Send request for risk estimation with overrides
+//  riskEstimationRequest = connector.sendRequest(baseUrl, "/estimate-risk/foster-1992/requests", riskBody);
+//  if (riskEstimationRequest.error.code == 200 || riskEstimationRequest.error.code == 202)
+//  {
+//    cout << "Send risk estimation request completed" << endl;
+//  }
+//  else {
+//    cout << "Risk estimation request failed with status: " << riskEstimationRequest.error.status << endl;
+//    cout << riskEstimationRequest.error.message << endl;
+//  }
+//  requestIdRiskEstimation = connector.requestId;
+//  cout << "Risk estimation request ID: " << requestIdRiskEstimation << endl;
+//
+//  // get results for risk estimation
+//  riskEstimationResult = retrieveResult(connector, baseUrl, "/estimate-risk/foster-1992/simple/results/", requestIdRiskEstimation);
+//  if (riskEstimationResult.error.code != 200 && riskEstimationResult.error.code != 202)
+//  {
+//    cout << "Retrieving risk estimation response failed with status: " << riskEstimationResult.error.status << endl;
+//    cout << riskEstimationResult.error.message << endl;
+//  }
+//  if (riskEstimationResult.error.code == 200) {
+//    cout << riskEstimationResult.body.serialize() << endl;
+//  }
 }
 
 int main(int argc, char* argv[])
@@ -1098,11 +752,12 @@ int main(int argc, char* argv[])
   // Here you add your password:
   string password = <password>;
   // Correct URL and port for the v2020.01 release
-  string baseUrl = "http://okapi.ddns.net:34568";
+  // string baseUrl = "http://okapi.ddns.net:34568";
+  string baseUrl = "http://80.158.41.0:8080";
 
 	// Authentication with Auth0 to retrieve the access token
   cout << "[Authentication] - started" << endl;
-	OkapiConnector::CompleteResult initResult
+	OkapiConnector::Result initResult
       = connector.init(methods::POST,username,password);
   
   if (initResult.error.code == 200 || initResult.error.code == 202)
@@ -1116,36 +771,36 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  // PASS PREDICTION
-  cout << "[Predict passes] - started" << endl;
-  predictPassesTests(connector, baseUrl);
-  cout << "[Predict passes] - completed" << endl;
-
-  // NEPTUNE propagation
-  cout << "[Propagate orbit NEPTUNE] - started" << endl;
-  neptuneTest(connector, baseUrl);
-  cout << "[Propagate orbit NEPTUNE] - completed" << endl;
-
-  // NEPTUNE co-variance propagation
-  cout << "[Propagate OPM Co-variance NEPTUNE] - started" << endl;
-  neptuneOpmCovarianceTest(connector, baseUrl);
-  cout << "[Propagate OPM Co-variance NEPTUNE] - completed" << endl;
-  
-  // NEPTUNE maneuvre propagation enabled
-  cout << "[Propagate OPM Maneuvre NEPTUNE] - started" << endl;
-  neptuneOpmManeuvreTest(connector, baseUrl);
-  cout << "[Propagate OPM Maneuvre NEPTUNE] - completed" << endl;
-
-  // Orekit propagation
-  cout << "[Propagate orbit Orekit-numerical] - started" << endl;
-  orekitNumericalTest(connector, baseUrl);
-  cout << "[Propagate orbit Orekit-numerical] - completed" << endl;
-
-
-  // SGP4 propagation
-  cout << "[Propagate orbit SGP4] - started" << endl;
-  sgp4Test(connector, baseUrl);
-  cout << "[Propagate orbit SGP4] - completed" << endl;
+//  // PASS PREDICTION
+//  cout << "[Predict passes] - started" << endl;
+//  predictPassesTests(connector, baseUrl);
+//  cout << "[Predict passes] - completed" << endl;
+//
+//  // NEPTUNE propagation
+//  cout << "[Propagate orbit NEPTUNE] - started" << endl;
+//  neptuneTest(connector, baseUrl);
+//  cout << "[Propagate orbit NEPTUNE] - completed" << endl;
+//
+//  // NEPTUNE co-variance propagation
+//  cout << "[Propagate OPM Co-variance NEPTUNE] - started" << endl;
+//  neptuneOpmCovarianceTest(connector, baseUrl);
+//  cout << "[Propagate OPM Co-variance NEPTUNE] - completed" << endl;
+//
+//  // NEPTUNE maneuvre propagation enabled
+//  cout << "[Propagate OPM Maneuvre NEPTUNE] - started" << endl;
+//  neptuneOpmManeuvreTest(connector, baseUrl);
+//  cout << "[Propagate OPM Maneuvre NEPTUNE] - completed" << endl;
+//
+//  // Orekit propagation
+//  cout << "[Propagate orbit Orekit-numerical] - started" << endl;
+//  orekitNumericalTest(connector, baseUrl);
+//  cout << "[Propagate orbit Orekit-numerical] - completed" << endl;
+//
+//
+//  // SGP4 propagation
+//  cout << "[Propagate orbit SGP4] - started" << endl;
+//  sgp4Test(connector, baseUrl);
+//  cout << "[Propagate orbit SGP4] - completed" << endl;
 
 
   // Risk Estimation

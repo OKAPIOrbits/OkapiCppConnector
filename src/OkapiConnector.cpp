@@ -99,7 +99,8 @@ OkapiConnector::CompleteResult OkapiConnector::sendRequest(string baseUrl, strin
   http_client okapiRequest(baseUrl + endpoint);
   http_request request(methods::POST);
   request.set_body(requestBody);
-  request.headers().add(U("access_token"), this->accessToken);
+  request.headers().add(U("access_token"), this->accessToken); // Legacy
+  request.headers().add(U("Authorization"), "Bearer " + this->accessToken);
   
 	okapiRequest.request(request).then([&](http_response response)
 	{
@@ -187,7 +188,8 @@ OkapiConnector::CompleteResult OkapiConnector::getResult(string baseUrl, string 
   // Compile the proper get request
   http_client okapiGet(baseUrl + endpoint + requestId);
   http_request request(methods::GET);
-  request.headers().add(U("access_token"), this->accessToken);
+  request.headers().add(U("access_token"), this->accessToken); // Legacy
+  request.headers().add(U("Authorization"), "Bearer " + this->accessToken);
  
 	okapiGet.request(request).then([&](http_response response)
 	{

@@ -637,7 +637,7 @@ int main(int argc, char* argv[])
 	// Authentication with Auth0 to retrieve the access token
   cout << "[Authentication] - started" << endl;
 	OkapiConnector::OkapiResult initResult
-      = connector.init("https://platform.okapiorbits.com/api/","username", "password");
+      = connector.init("https://api.okapiorbits.com/","username", "password");
 
   if (initResult.error.code == 200 || initResult.error.code == 202)
   {

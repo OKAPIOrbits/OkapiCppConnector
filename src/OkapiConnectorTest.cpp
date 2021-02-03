@@ -591,11 +591,11 @@ string deleteSatelliteTest(OkapiConnector okapi, string satelliteId) {
 }
 
 string getConjunctionsTest(OkapiConnector okapi) {
-
   OkapiConnector::OkapiResult result = okapi.getConjunctions();
-
-  string conjunctionId = result.body.as_object().at(U("elements")).as_array()[0].at(U("conjunction_id")).as_string();
-
+  string conjunctionId = "";
+  if(result.body.as_object().at(U("elements")).as_array().size() > 0) {
+    string conjunctionId = result.body.as_object().at(U("elements")).as_array()[0].at(U("conjunction_id")).as_string();
+  }
   // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     cout << result.body.serialize() << endl;
@@ -606,9 +606,10 @@ string getConjunctionsTest(OkapiConnector okapi) {
 }
 
 void getCdmsTest(OkapiConnector okapi, string conjunctionId) {
-
-  OkapiConnector::OkapiResult result = okapi.getCdms(conjunctionId);
-
+  OkapiConnector::OkapiResult result = {};
+  if(!conjunctionId.empty()) {
+    result = okapi.getCdms(conjunctionId);
+  }
   // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     cout << result.body.serialize() << endl;
@@ -618,9 +619,10 @@ void getCdmsTest(OkapiConnector okapi, string conjunctionId) {
 }
 
 void getManeuverEvalsTest(OkapiConnector okapi, string conjunctionId) {
-
-  OkapiConnector::OkapiResult result = okapi.getManeuverEvals(conjunctionId);
-
+  OkapiConnector::OkapiResult result = {};
+  if(!conjunctionId.empty()) {
+    OkapiConnector::OkapiResult result = okapi.getManeuverEvals(conjunctionId);
+  }
   // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     cout << result.body.serialize() << endl;
@@ -637,7 +639,7 @@ int main(int argc, char* argv[])
 	// Authentication with Auth0 to retrieve the access token
   cout << "[Authentication] - started" << endl;
 	OkapiConnector::OkapiResult initResult
-      = connector.init("https://api.okapiorbits.com/","username", "password");
+      = connector.init("https://api.okapiorbits.com/","raving_dog@web.de","dogsaccount18#");
 
   if (initResult.error.code == 200 || initResult.error.code == 202)
   {

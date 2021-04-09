@@ -11,45 +11,29 @@ using namespace web::http::client;
 
 void predictPassesTests(OkapiConnector connector)
 {
-  double altitude = 0.048;
-  double longitude = 10.645;
-  double latitude = 52.328;
-  string start = "2018-08-06T18:19:44.256Z";
-  string end =   "2018-08-07T00:00:00.000Z";
-  double area = 0.01;
-  double mass = 1.3;
-  double x = -2915.65441951;
-  double y = -3078.17058851;
-  double z = 5284.39698421;
-  double x_dot = 4.94176934;
-  double y_dot = -5.83109248;
-  double z_dot = -0.66365683;
-  string epoch = "2018-08-06T18:19:43.256Z";
-  double outputTimeStep = 60;
-
   web::json::value groundLocationContent;
-  groundLocationContent[U("altitude")] = web::json::value::number(altitude);
-  groundLocationContent[U("longitude")] = web::json::value::number(longitude);
-  groundLocationContent[U("latitude")] = web::json::value::number(latitude);
+  groundLocationContent[U("altitude")] = web::json::value::number( 0.048);
+  groundLocationContent[U("longitude")] = web::json::value::number(10.645);
+  groundLocationContent[U("latitude")] = web::json::value::number(52.328);
 
   web::json::value timeWindowContent;
-  timeWindowContent[U("start")] = web::json::value::string(start);
-  timeWindowContent[U("end")] = web::json::value::string(end);
+  timeWindowContent[U("start")] = web::json::value::string("2018-08-06T18:19:44.256Z");
+  timeWindowContent[U("end")] = web::json::value::string("2018-08-07T00:00:00.000Z");
 
   web::json::value predictPassesSettingsSimple;
-  predictPassesSettingsSimple[U("output_step_size")] = web::json::value::number(outputTimeStep);
+  predictPassesSettingsSimple[U("output_step_size")] = web::json::value::number(60);
   predictPassesSettingsSimple[U("geopotential_degree_order")] = web::json::value::number(2);
 
   web::json::value simpleState;
-  simpleState[U("area")] = web::json::value::number(area);
-  simpleState[U("mass")] = web::json::value::number(mass);
-  simpleState[U("x")] = web::json::value::number(x);
-  simpleState[U("y")] = web::json::value::number(y);
-  simpleState[U("z")] = web::json::value::number(z);
-  simpleState[U("x_dot")] = web::json::value::number(x_dot);
-  simpleState[U("y_dot")] = web::json::value::number(y_dot);
-  simpleState[U("z_dot")] = web::json::value::number(z_dot);
-  simpleState[U("epoch")] = web::json::value::string(epoch);
+  simpleState[U("area")] = web::json::value::number(0.01);
+  simpleState[U("mass")] = web::json::value::number(1.3);
+  simpleState[U("x")] = web::json::value::number(-2915.65441951);
+  simpleState[U("y")] = web::json::value::number(-3078.17058851);
+  simpleState[U("z")] = web::json::value::number(5284.39698421);
+  simpleState[U("x_dot")] = web::json::value::number(4.94176934);
+  simpleState[U("y_dot")] = web::json::value::number(-5.83109248);
+  simpleState[U("z_dot")] = web::json::value::number(-0.66365683);
+  simpleState[U("epoch")] = web::json::value::string("2018-08-06T18:19:43.256Z");
 
   web::json::value passPredictionNumericalRequestBody;
   web::json::value groundLocation;
@@ -516,15 +500,15 @@ string addSatelliteTest(OkapiConnector okapi) {
   web::json::value newSatellite;
   newSatellite[U("name")] = web::json::value::string("Sputnik");
   std::vector<web::json::value> noradIds;
-  noradIds.push_back(web::json::value::string("1"));
+  noradIds.push_back(web::json::value::number(1));
   newSatellite[U("norad_ids")] = web::json::value::array(noradIds);
   // This is a random ID, which will be changed by the backend but currently it is still required
   newSatellite[U("satellite_id")] = web::json::value::string("550e8400-e29b-11d4-a716-446655440000");
   newSatellite[U("space_track_status")] = web::json::value::string("sharing_agreement_signed");
+  newSatellite[U("active")] = web::json::value::boolean(false);
 
   OkapiConnector::OkapiResult result = okapi.addSatellite(newSatellite);
 
-  // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     newSatellite = result.body;
     cout << newSatellite.serialize() << endl;
@@ -542,7 +526,7 @@ string updateSatelliteTest(OkapiConnector okapi, string satelliteId) {
   web::json::value currentSatellite;
   currentSatellite[U("name")] = web::json::value::string("Sputnik-2");
   std::vector<web::json::value> noradIds;
-  noradIds.push_back(web::json::value::string("1"));
+  noradIds.push_back(web::json::value::number(1));
   currentSatellite[U("norad_ids")] = web::json::value::array(noradIds);
   // This is a random ID, which will be changed by the backend but currently it is still required
   currentSatellite[U("satellite_id")] = web::json::value::string(satelliteId);
@@ -550,7 +534,6 @@ string updateSatelliteTest(OkapiConnector okapi, string satelliteId) {
 
   OkapiConnector::OkapiResult result = okapi.updateSatellite(currentSatellite, satelliteId);
 
-  // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     currentSatellite = result.body;
     cout << currentSatellite.serialize() << endl;
@@ -565,7 +548,6 @@ void getSatellitesTest(OkapiConnector okapi) {
 
   OkapiConnector::OkapiResult result = okapi.getSatellites();
 
-  // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     cout << result.body.serialize() << endl;
   } else {
@@ -579,7 +561,6 @@ string deleteSatelliteTest(OkapiConnector okapi, string satelliteId) {
 
   OkapiConnector::OkapiResult result = okapi.deleteSatellite(satelliteId);
 
-   // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     web::json::value currentSatellite = result.body;
     cout << currentSatellite.serialize() << endl;
@@ -594,9 +575,10 @@ string getConjunctionsTest(OkapiConnector okapi) {
 
   OkapiConnector::OkapiResult result = okapi.getConjunctions();
 
-  string conjunctionId = result.body.as_object().at(U("elements")).as_array()[0].at(U("conjunction_id")).as_string();
+  string conjunctionId;
+  if (result.body.as_object().at(U("elements")).as_array().size() > 0)
+    conjunctionId = result.body.as_object().at(U("elements")).as_array()[0].at(U("conjunction_id")).as_string();
 
-  // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     cout << result.body.serialize() << endl;
   } else {
@@ -609,7 +591,6 @@ void getCdmsTest(OkapiConnector okapi, string conjunctionId) {
 
   OkapiConnector::OkapiResult result = okapi.getCdms(conjunctionId);
 
-  // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     cout << result.body.serialize() << endl;
   } else {
@@ -621,7 +602,6 @@ void getManeuverEvalsTest(OkapiConnector okapi, string conjunctionId) {
 
   OkapiConnector::OkapiResult result = okapi.getManeuverEvals(conjunctionId);
 
-  // Retrieve the newly assigned satellite id
   if (result.error.code == 200) {
     cout << result.body.serialize() << endl;
   } else {
@@ -637,7 +617,7 @@ int main(int argc, char* argv[])
 	// Authentication with Auth0 to retrieve the access token
   cout << "[Authentication] - started" << endl;
 	OkapiConnector::OkapiResult initResult
-      = connector.init("https://platform.okapiorbits.com/api/","username", "password");
+      = connector.init("https://api.okapiorbits.com/", "username", "password");
 
   if (initResult.error.code == 200 || initResult.error.code == 202)
   {

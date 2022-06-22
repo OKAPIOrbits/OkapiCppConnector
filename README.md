@@ -13,3 +13,5 @@ Provides basic routines to init your OKAPI account as well as send requests and 
 To build the library, create a `build` directory in your main folder, change into it and run the two commands `cmake ../` and `make install`. This will generate a shared object (.so or .dylib) in the `lib` folder. You can now use the library. The runnable example `okapi-connector-test` is available in the `bin`directory. 
 
 For more information on the API and more examples, visit www.okapiorbits.space/documentation/
+
+NOTE: This repository is currently not maintained. For a more recent version, please contact sven@okapiorbits.com

@@ -15,4 +15,4 @@ To build the library, create a `build` directory in your main folder, change int
 For more information on the API and more examples, visit www.okapiorbits.space/documentation/
 
 ### NOTE
-This repository is currently not maintained. For a more recent version, please contact sven@okapiorbits.com
+This repository is currently not maintained. For a more recent version, please contact christopher@okapiorbits.com
